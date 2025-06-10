@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.20)
 
-project(sample-project)
+project(voxl)
 
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -34,8 +34,9 @@ file(GLOB_RECURSE DEP CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgu
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${MY_SOURCES} )
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${DEP} )
 
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/extern/stb")
 
 target_compile_definitions("${CMAKE_PROJECT_NAME}" PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
-
+target_compile_definitions("${CMAKE_PROJECT_NAME}" PRIVATE VOXL_RES_DIR="${CMAKE_SOURCE_DIR}/res")

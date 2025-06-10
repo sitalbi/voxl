@@ -1,7 +1,12 @@
-#include <iostream>
+#include "application.h"
 
-int main() {
-	std::cout << "Hello, World!" << std::endl;
+int main(void)
+{
+	Application app;
 
-	return 0;
+	app.init();
+	app.run();
+	app.shutdown();
+  
+    return 0;
 }
