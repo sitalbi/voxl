@@ -2,7 +2,7 @@
 
 #include "subsystem.h"
 #include "camera.h"
-#include "cube.h"
+#include "chunk.h"
 #include <memory>
 #include <player.h>
 
@@ -20,7 +20,8 @@ public:
 	void setPlayer(std::shared_ptr<Player> player) {
 		m_player = player;
 	}
-	std::unique_ptr<Cube>& getCube() { return m_cube; }
+	//std::unique_ptr<Cube>& getCube() { return m_cube; }
+	std::unique_ptr<Chunk>& getChunk() { return m_chunk; }
 	std::shared_ptr<Player> getPlayer() const { return m_player; }
 
 private:
@@ -30,6 +31,6 @@ private:
 	// Chunk array
 
 	// For the moment we just store a single cube to test
-	std::unique_ptr<Cube> m_cube;
+	std::unique_ptr<Chunk> m_chunk;
 
 };

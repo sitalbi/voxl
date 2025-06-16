@@ -1,9 +1,10 @@
-#pragma once 
+﻿#pragma once 
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
 #include "mesh.h"
+#include <array>
 
 enum class BlockType {
 	None = 0,
@@ -13,8 +14,104 @@ enum class BlockType {
 	Sand,
 	Wood,
 	Water,
-	Leaves,
-	Snow
+	Snow,
+	NUM
+};
+
+struct AtlasTile {
+	glm::vec2 uv00, uv10, uv11, uv01;
+};
+
+// Struct defining the texture atlas
+struct Atlas {
+	static constexpr int COLS = 16;
+	static constexpr int ROWS = 16;
+	static constexpr size_t TYPE_COUNT = size_t(BlockType::NUM);
+	static constexpr size_t FACE_COUNT = 6;
+
+	static constexpr AtlasTile makeRect(int col, int row) {
+		float du = 1.0f / float(COLS), dv = 1.0f / float(ROWS);
+		float u0 = col * du, v0 = row * dv;
+		return AtlasTile{
+		  {u0,      v0    },
+		  {u0 + du,   v0    },
+		  {u0 + du,   v0 + dv },
+		  {u0,      v0 + dv }
+		};
+	}
+
+	static inline const std::array<std::array<AtlasTile, FACE_COUNT>, TYPE_COUNT> blockUVs = {{
+		// BlockType::None  (0)
+		{{
+			makeRect(0,1), makeRect(0,1),
+			makeRect(0,1), makeRect(0,1),
+			makeRect(0,1), makeRect(0,1)
+		}},
+		// BlockType::Grass (1)
+		{{
+			makeRect(3,15), // left
+			makeRect(3,15), // right
+			makeRect(2,15), // bottom
+			makeRect(0,15), // top
+			makeRect(3,15), // back
+			makeRect(3,15)  // front
+		}},
+		// BlockType::Dirt  (2)
+		{{
+			makeRect(2,15), // left
+			makeRect(2,15), // right
+			makeRect(2,15), // bottom
+			makeRect(2,15), // top
+			makeRect(2,15), // back
+			makeRect(2,15)  // front
+		}},
+		// BlockType::Stone (3)
+		{{
+			makeRect(1,15), // left
+			makeRect(1,15), // right
+			makeRect(1,15), // bottom
+			makeRect(1,15), // top
+			makeRect(1,15), // back
+			makeRect(1,15)  // front
+		}},
+		// BlockType::Sand  (4)
+		{{
+			makeRect(3,15), // left
+			makeRect(3,15), // right
+			makeRect(3,15), // bottom
+			makeRect(3,15), // top
+			makeRect(3,15), // back
+			makeRect(3,15)  // front
+		}},
+		// BlockType::Wood  (5)
+		{{
+			makeRect(4,15), // left
+			makeRect(4,15), // right
+			makeRect(5,15), // bottom
+			makeRect(5,15), // top
+			makeRect(4,15), // back
+			makeRect(4,15)  // front
+		}},
+		// BlockType::Water (6)
+		{{
+			makeRect(0,1), // left
+			makeRect(0,1), // right
+			makeRect(0,1), // bottom
+			makeRect(0,1), // top
+			makeRect(0,1), // back
+			makeRect(0,1)  // front
+		}},
+		// BlockType::Snow  (7)
+		{{
+			makeRect(2,11), // left
+			makeRect(2,11), // right
+			makeRect(2,11), // bottom
+			makeRect(2,11), // top
+			makeRect(2,11), // back
+			makeRect(2,11)  // front
+		}}
+	}};
+
 };
 
 class Cube {

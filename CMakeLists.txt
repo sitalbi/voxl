@@ -37,6 +37,7 @@ target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${DEP} )
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/extern/stb")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/extern/fastnoise")
 
 target_compile_definitions("${CMAKE_PROJECT_NAME}" PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 target_compile_definitions("${CMAKE_PROJECT_NAME}" PRIVATE VOXL_RES_DIR="${CMAKE_SOURCE_DIR}/res")

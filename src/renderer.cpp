@@ -2,6 +2,7 @@
 #include "renderer.h"
 #include <iostream>
 #include "voxl.h"
+#include <texture.h>
 
 
 Renderer::Renderer() : window(nullptr)
@@ -51,7 +52,27 @@ bool Renderer::init()
 	
 	// Shader initialization
 	shader = std::make_unique<Shader>(VOXL_RES_DIR "/shaders/default_vert.glsl", VOXL_RES_DIR"/shaders/default_frag.glsl");
+	shader->bind();
+	shader->setUniformMat4f("uModel", glm::mat4(1.0f));
+
+	// Texture atlas initialization
+	Texture textureAtlas;
+	bool textureLoaded = textureAtlas.loadFromFile(VOXL_RES_DIR "/textures/default_texture.png");
+	if (!textureLoaded) {
+		std::cerr << "Failed to load texture atlas" << std::endl;
+		return false;
+	}
+	
+	// Set the texture uniform in the shader
+	textureAtlas.bind(0);
+	shader->bind();
+	shader->setUniform1i("uAtlas", 0);
+
     
+	// Backface culling
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+
     // Enable depth 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -70,12 +91,11 @@ void Renderer::update(float deltaTime)
 
 	// Shader uniforms
 	shader->bind();
-	shader->setUniformMat4f("uModel", world->getCube()->getModelMatrix());
 	shader->setUniformMat4f("uView", world->getPlayer()->getView());
 	shader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
 
-	// Draw the cube
-	world->getCube()->draw();
+	// Draw the chunk
+	world->getChunk()->draw();
 
 	// Player wireframe mode
 	if (world->getPlayer()->wireframeMode) {

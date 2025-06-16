@@ -16,14 +16,15 @@ bool World::init()
 		return true;
 	}
 
-	m_cube = std::make_unique<Cube>(BlockType::Dirt, glm::vec3(0.0f, 0.0f, 0.0f));
+	m_chunk = std::make_unique<Chunk>();
+	m_chunk->generate();
 	
 	return true;
 }
 
 void World::update(float deltaTime)
 {
-	// TODO: update player when player will be impl
+	// TODO: update chunk
 }
 
 void World::shutdown()

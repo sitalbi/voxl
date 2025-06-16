@@ -4,43 +4,44 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-static std::vector<float> cube_vertex_data = {
+static const std::vector<glm::vec3> cube_vertex_data = {
     // Front face
-    -0.5f, -0.5f, 0.5f,
-    0.5f, -0.5f, 0.5f,
-    0.5f, 0.5f, 0.5f,
-    -0.5f, 0.5f, 0.5f,
+    { -0.5f, -0.5f,  0.5f },
+    {  0.5f, -0.5f,  0.5f },
+    {  0.5f,  0.5f,  0.5f },
+    { -0.5f,  0.5f,  0.5f },
 
     // Back face
-    -0.5f, -0.5f, -0.5f,
-    -0.5f, 0.5f, -0.5f,
-    0.5f, 0.5f, -0.5f,
-    0.5f, -0.5f, -0.5f,
+    { -0.5f, -0.5f, -0.5f },
+    { -0.5f,  0.5f, -0.5f },
+    {  0.5f,  0.5f, -0.5f },
+    {  0.5f, -0.5f, -0.5f },
 
     // Right face
-    0.5f, -0.5f, 0.5f,
-    0.5f, -0.5f, -0.5f,
-    0.5f, 0.5f, -0.5f,
-    0.5f, 0.5f, 0.5f,
+    {  0.5f, -0.5f,  0.5f },
+    {  0.5f, -0.5f, -0.5f },
+    {  0.5f,  0.5f, -0.5f },
+    {  0.5f,  0.5f,  0.5f },
 
     // Left face
-    -0.5f, -0.5f, 0.5f,
-    -0.5f, 0.5f, 0.5f,
-    -0.5f, 0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
+    { -0.5f, -0.5f,  0.5f },
+    { -0.5f,  0.5f,  0.5f },
+    { -0.5f,  0.5f, -0.5f },
+    { -0.5f, -0.5f, -0.5f },
 
     // Top face
-    -0.5f, 0.5f, 0.5f,
-    0.5f, 0.5f, 0.5f,
-    0.5f, 0.5f, -0.5f,
-    -0.5f, 0.5f, -0.5f,
+    { -0.5f,  0.5f,  0.5f },
+    {  0.5f,  0.5f,  0.5f },
+    {  0.5f,  0.5f, -0.5f },
+    { -0.5f,  0.5f, -0.5f },
 
     // Bottom face
-    -0.5f, -0.5f, 0.5f,
-    -0.5f, -0.5f, -0.5f,
-    0.5f, -0.5f, -0.5f,
-    0.5f, -0.5f, 0.5f
+    { -0.5f, -0.5f,  0.5f },
+    { -0.5f, -0.5f, -0.5f },
+    {  0.5f, -0.5f, -0.5f },
+    {  0.5f, -0.5f,  0.5f }
 };
+
 
 
 static std::vector<unsigned int> cube_index_data = {
@@ -60,14 +61,33 @@ public:
 
 	void createCube();
 
+	void createMesh();
+
     void draw() const;
 
+	void setVertices(const std::vector<glm::vec3>& vertices) {
+		m_vertices = vertices;
+	}
+
+	void setNormals(const std::vector<glm::vec3>& normals) {
+		m_normals = normals;
+	}
+
+	void setTexCoords(const std::vector<glm::vec2>& texCoords) {
+		m_texCoords = texCoords;
+	}
+
+	void setIndices(const std::vector<unsigned int>& indices) {
+		m_indices = indices;
+	}
+
 private:
-	unsigned int VAO, VBO, EBO, NBO, CBO;
+	unsigned int VAO, VBO, EBO, NBO, TBO;
 
 	std::vector<glm::vec3> m_vertices;
 	std::vector<glm::vec3> m_normals;
 	std::vector<glm::vec4> m_colors;
+    std::vector<glm::vec2> m_texCoords;
 
 	std::vector<unsigned int> m_indices;
 
