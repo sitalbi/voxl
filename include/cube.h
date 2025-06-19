@@ -40,6 +40,20 @@ struct Atlas {
 		};
 	}
 
+	static inline int faceIndexForDir(const glm::vec3& dir) {
+		if (dir.x < 0) return 0;  // left
+		else if (dir.x > 0) return 1;  // right
+		else if (dir.y < 0) return 2;  // bottom
+		else if (dir.y > 0) return 3;  // top
+		else if (dir.z < 0) return 4;  // back
+		else /*dir.z>0*/   return 5;  // front
+	}
+
+	static inline const AtlasTile& getTile(BlockType type, const glm::vec3& dir) {
+		int idx = faceIndexForDir(dir);
+		return blockUVs[size_t(type)][idx];
+	}
+
 	static inline const std::array<std::array<AtlasTile, FACE_COUNT>, TYPE_COUNT> blockUVs = {{
 		// BlockType::None  (0)
 		{{

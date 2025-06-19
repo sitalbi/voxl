@@ -93,3 +93,11 @@ private:
 
 
 };
+
+enum class BlockType;
+struct Quad {
+	glm::vec3 position; // Position of the quad
+	glm::vec2 size;     // Size of the quad (width, height)
+    glm::vec3 direction;      // Direction of the quad (0-5 for each face)
+	BlockType type;    // Type of block (for texture mapping)
+};;
