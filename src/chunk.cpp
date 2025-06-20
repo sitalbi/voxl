@@ -33,28 +33,22 @@ void Chunk::setBlockType(int x, int y, int z, BlockType type)
 
 void Chunk::generate()
 {
-	m_indexCount = 0;
-
-	BlockType type = BlockType::None;
-
+    m_indexCount = 0;
+    BlockType type = BlockType::None;
     fnl_state noise = fnlCreateState();
     noise.noise_type = FNL_NOISE_PERLIN;
-    noise.frequency = 0.05f;
+    noise.frequency = 0.025f;
 
-    
-
-	for (int x = 0; x < CHUNK_SIZE; ++x) {
-		for (int z = 0; z < CHUNK_SIZE; ++z) {
+    for (int x = 0; x < CHUNK_SIZE; ++x) {
+        for (int z = 0; z < CHUNK_SIZE; ++z) {
             // Generate a height for the current (x, z) position based on noise
             float noiseValue = fnlGetNoise2D(&noise, m_x + x, m_z + z);
-            int maxHeight = static_cast<int>((noiseValue + 1.0f) * (CHUNK_SIZE / 2));  // Map noise to chunk height
+            int maxHeight = static_cast<int>((noiseValue + 1.0f) * (CHUNK_HEIGHT / 2));
 
-		    for (int y = 0; y < CHUNK_HEIGHT; ++y) {
+            for (int y = 0; y < CHUNK_HEIGHT; ++y) {
                 type = BlockType::None;
-                // Only set blocks up to maxHeight
-                if (y < maxHeight)  
-                {
-                    if (y < maxHeight - 2) {
+                if (y < maxHeight) {
+                    if (y < maxHeight - 4) {
                         type = BlockType::Stone;
                     }
                     else if (y == maxHeight - 1) {
@@ -64,57 +58,21 @@ void Chunk::generate()
                         type = BlockType::Dirt;
                     }
                 }
-
-				cubes[x][y][z] = type;
-			}
-		}
-	}
-	generateGreedyMesh();
-}
-
-void Chunk::generateMesh()
-{
-	std::vector<glm::vec3> vertices;
-	std::vector<glm::vec3> normals;
-	std::vector<glm::vec2> textures;
-	std::vector<unsigned int> indices;
-
-    std::vector<glm::vec3> directions = {
-        {-1,0,0} ,{1,0,0}, {0,-1,0}, {0,1,0}, {0,0,-1}, {0,0,1}
-    };
-
-	for (int x = 0; x < CHUNK_SIZE; ++x) {
-		for (int y = 0; y < CHUNK_HEIGHT; ++y) {
-			for (int z = 0; z < CHUNK_SIZE; ++z) {
-				BlockType blockType = cubes[x][y][z];
-				for (int faceIndex = 0; faceIndex < 6; ++faceIndex) {
-                    if (isBlockFaceVisible(x, y, z, directions[faceIndex], blockType)) {
-                        addFace(vertices, normals, textures,indices, x, y, z, faceIndex, blockType);
-						for (int i = 0; i < 3; ++i) { 
-                            normals.push_back(directions[faceIndex]);
-						}
-                    }
-				}
-			}
-		}
-	}
-	m_mesh = std::make_unique<Mesh>();
-	m_mesh->setVertices(vertices);
-	m_mesh->setNormals(normals);
-	m_mesh->setTexCoords(textures);
-	m_mesh->setIndices(indices);
-	m_indexCount = indices.size();
-	m_mesh->createMesh();
+                cubes[x][y][z] = type;
+            }
+        }
+    }
+    generateGreedyMesh();
 }
 
 void Chunk::generateGreedyMesh()
 {
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
-    std::vector<glm::vec2> textures;
+    std::vector<glm::vec3> textures;
     std::vector<unsigned int> indices;
 
-    // All 6 directions: left, right, bottom, top, back, front
+    // All 6 directions
     std::vector<glm::vec3> directions = {
         {-1, 0, 0},  // 0: left   
         { 1, 0, 0},  // 1: right  
@@ -141,7 +99,7 @@ void Chunk::generateGreedyMesh()
 void Chunk::processDirection(const glm::vec3& dir,
     std::vector<glm::vec3>& vertices,
     std::vector<glm::vec3>& normals,
-    std::vector<glm::vec2>& textures,
+    std::vector<glm::vec3>& textures,
     std::vector<unsigned int>& indices)
 {
     std::unordered_set<glm::ivec3> visited;
@@ -267,7 +225,7 @@ int Chunk::getMaxHeight(const glm::ivec3& startPos, const glm::ivec3& heightAxis
 void Chunk::generateQuadGeometry(const Quad& quad,
     std::vector<glm::vec3>& vertices,
     std::vector<glm::vec3>& normals,
-    std::vector<glm::vec2>& textures,
+    std::vector<glm::vec3>& textures,
     std::vector<unsigned int>& indices)
 {
     glm::vec3 pos = quad.position;
@@ -332,53 +290,57 @@ void Chunk::generateQuadGeometry(const Quad& quad,
         normals.push_back(dir);
     }
 
-    // Add texture coordinates
-    const AtlasTile& tile = Atlas::getTile(quad.type, dir);
-    glm::vec2 uv1, uv2, uv3, uv4;
+    // Add texture 
+    int layer = Atlas::getLayer(quad.type, quad.direction);
+    float w = float(quad.size.x);
+    float h = float(quad.size.y);
+
+    glm::vec3 uv0, uv1, uv2, uv3;
 
     switch (faceIndex) {
     case 0: // Left face
-        uv1 = tile.uv00;
-        uv2 = tile.uv01;
-        uv3 = tile.uv11;
-        uv4 = tile.uv10;
+        uv0 = glm::vec3(w, 0.0f, layer);
+        uv1 = glm::vec3(w, h, layer);
+        uv2 = glm::vec3(0.0f, h, layer);
+        uv3 = glm::vec3(0.0f, 0.0f, layer);
         break;
     case 1: // Right face
-        uv1 = tile.uv00;
-        uv2 = tile.uv01;
-        uv3 = tile.uv11;
-        uv4 = tile.uv10;
+        uv0 = glm::vec3(0.0f, 0.0f, layer);
+        uv1 = glm::vec3(0.0f, h, layer);
+        uv2 = glm::vec3(w, h, layer);
+        uv3 = glm::vec3(w, 0.0f, layer);
         break;
     case 2: // Bottom face
-        uv1 = tile.uv10;
-        uv2 = tile.uv00;
-        uv3 = tile.uv01;
-        uv4 = tile.uv11;
+        uv0 = glm::vec3(w, 0.0f, layer);
+        uv1 = glm::vec3(w, h, layer);
+        uv2 = glm::vec3(0.0f, h, layer);
+        uv3 = glm::vec3(0.0f, 0.0f, layer);
         break;
-    case 3: // Top face
-        uv1 = tile.uv00;
-        uv2 = tile.uv10;
-        uv3 = tile.uv11;
-        uv4 = tile.uv01;
+    case 3: // Top face 
+        uv0 = glm::vec3(0.0f, h, layer);
+        uv1 = glm::vec3(w, h, layer);  
+        uv2 = glm::vec3(w, 0.0f, layer); 
+        uv3 = glm::vec3(0.0f, 0.0f, layer); 
         break;
     case 4: // Back face
-        uv1 = tile.uv00;
-        uv2 = tile.uv10;
-        uv3 = tile.uv11;
-        uv4 = tile.uv01;
+        uv0 = glm::vec3(w, 0.0f, layer);  
+        uv1 = glm::vec3(0.0f, 0.0f, layer); 
+        uv2 = glm::vec3(0.0f, h, layer);  
+        uv3 = glm::vec3(w, h, layer);  
         break;
-    case 5: // Front face
-        uv1 = tile.uv10;
-        uv2 = tile.uv00;
-        uv3 = tile.uv01;
-        uv4 = tile.uv11;
+    case 5: // Front face 
+        uv0 = glm::vec3(0.0f, 0.0f, layer); 
+        uv1 = glm::vec3(w, 0.0f, layer); 
+        uv2 = glm::vec3(w, h, layer); 
+        uv3 = glm::vec3(0.0f, h, layer);  
         break;
     }
 
+    textures.push_back(uv0);
     textures.push_back(uv1);
     textures.push_back(uv2);
     textures.push_back(uv3);
-    textures.push_back(uv4);
+
 
     indices.push_back(startIndex);
     indices.push_back(startIndex + 1);
@@ -417,102 +379,5 @@ void Chunk::draw() const
 	else {
 		std::cerr << "Chunk mesh is not initialized!" << std::endl;
 	}
-}
-
-void Chunk::addFace(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec2>& textures, std::vector<uint32_t>& indices,
-    int x, int y, int z, int faceIndex, BlockType type) {
-    glm::vec3 v1, v2, v3, v4;
-	glm::vec2 uv1, uv2, uv3, uv4;
-
-	AtlasTile tile = Atlas::blockUVs[static_cast<size_t>(type)][faceIndex];
-
-    switch (faceIndex) {
-    case 0: // Left face
-        v1 = glm::vec3(x, y, z + 1);
-        v2 = glm::vec3(x, y + 1, z + 1);
-        v3 = glm::vec3(x, y + 1, z);
-        v4 = glm::vec3(x, y, z);
-		
-        uv1 = tile.uv00;
-        uv2 = tile.uv01;
-        uv3 = tile.uv11;
-        uv4 = tile.uv10;
-        break;
-    case 1: // Right face
-        v1 = glm::vec3(x + 1, y, z);
-        v2 = glm::vec3(x + 1, y + 1, z);
-        v3 = glm::vec3(x + 1, y + 1, z + 1);
-        v4 = glm::vec3(x + 1, y, z + 1);
-
-        uv1 = tile.uv00;
-        uv3 = tile.uv11;
-        uv2 = tile.uv01;
-        uv4 = tile.uv10;
-        break;
-    case 2: // Bottom face
-        v1 = glm::vec3(x + 1, y, z);
-        v2 = glm::vec3(x + 1, y, z + 1);
-        v3 = glm::vec3(x, y, z + 1);
-        v4 = glm::vec3(x, y, z);
-
-        uv1 = tile.uv10;
-        uv2 = tile.uv00;
-        uv3 = tile.uv01;
-        uv4 = tile.uv11;
-        break;
-    case 3: // Top face
-        v1 = glm::vec3(x, y + 1, z + 1);
-        v2 = glm::vec3(x + 1, y + 1, z + 1);
-        v3 = glm::vec3(x + 1, y + 1, z);
-        v4 = glm::vec3(x, y + 1, z);
-
-        uv1 = tile.uv00;
-        uv2 = tile.uv10;
-        uv3 = tile.uv11;
-        uv4 = tile.uv01;
-        break;
-    case 4: // Back face
-        v1 = glm::vec3(x + 1, y, z);
-        v2 = glm::vec3(x, y, z);
-        v3 = glm::vec3(x, y + 1, z);
-        v4 = glm::vec3(x + 1, y + 1, z);
-
-        uv1 = tile.uv00;
-        uv2 = tile.uv10;
-        uv3 = tile.uv11;
-        uv4 = tile.uv01;
-        break;
-    case 5: // Front face
-        v1 = glm::vec3(x, y, z + 1);
-        v2 = glm::vec3(x + 1, y, z + 1);
-        v3 = glm::vec3(x + 1, y + 1, z + 1);
-        v4 = glm::vec3(x, y + 1, z + 1);
-        
-        uv1 = tile.uv10;
-        uv2 = tile.uv00;
-        uv3 = tile.uv01;
-        uv4 = tile.uv11;
-        break;
-    default:
-        return;
-    }
-
-    uint32_t baseIndex = static_cast<uint32_t>(vertices.size());
-    vertices.push_back(v1);
-    vertices.push_back(v2);
-    vertices.push_back(v3);
-    vertices.push_back(v4);
-
-    indices.push_back(baseIndex);
-    indices.push_back(baseIndex + 1);
-    indices.push_back(baseIndex + 2);
-    indices.push_back(baseIndex + 2);
-    indices.push_back(baseIndex + 3);
-    indices.push_back(baseIndex);
-
-	textures.push_back(uv1);
-	textures.push_back(uv2);
-	textures.push_back(uv3);
-	textures.push_back(uv4);
 }
 

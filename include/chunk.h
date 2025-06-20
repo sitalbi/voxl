@@ -22,7 +22,7 @@ class Chunk {
 
 public:
 	static const int CHUNK_SIZE = 32;
-	static const int CHUNK_HEIGHT = 32;
+	static const int CHUNK_HEIGHT = 64;
 
 	Chunk(int x = 0, int y = 0, int z = 0);
 	Chunk(const Chunk* chunk);
@@ -39,7 +39,6 @@ public:
 	void setBlockType(int x, int y, int z, BlockType type);
 
 	void generate();
-	void generateMesh();
 	void generateGreedyMesh();
 
 
@@ -55,10 +54,7 @@ private:
 	std::unique_ptr<Mesh> m_mesh;
 	std::unique_ptr<Mesh> m_waterMesh;
 
-	void addFace(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec2>& textures, std::vector<unsigned int>& indices,
-		int x, int y, int z, int faceIndex, BlockType type);
-	
-	void processDirection(const glm::vec3& dir, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec2>& textures, std::vector<unsigned int>& indices);
+	void processDirection(const glm::vec3& dir, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec3>& textures, std::vector<unsigned int>& indices);
 
 
 	std::pair<int, int> expandQuad(const glm::ivec3& startPos, const glm::vec3& dir,
@@ -70,6 +66,6 @@ private:
 
 	int getMaxHeight(const glm::ivec3& startPos, const glm::ivec3& heightAxis);
 
-	void generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec2>& textures, std::vector<unsigned int>& indices);
+	void generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec3>& textures, std::vector<unsigned int>& indices);
 
 };

@@ -68,11 +68,11 @@ void Mesh::createMesh()
 	// Texture buffer 
 	glGenBuffers(1, &TBO);
 	glBindBuffer(GL_ARRAY_BUFFER, TBO);
-	glBufferData(GL_ARRAY_BUFFER, m_texCoords.size() * sizeof(glm::vec2), m_texCoords.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, m_texCoords.size() * sizeof(glm::vec3), m_texCoords.data(), GL_STATIC_DRAW);
 
 	// Set vertex attribute for texture coordinates (location 2)
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
 	// Index buffer
 	glGenBuffers(1, &EBO);

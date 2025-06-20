@@ -2,11 +2,11 @@
 
 out vec4 FragColor;
 
-in vec2 vTexCoord;
+in vec3 vTexCoord;
 
-uniform sampler2D uAtlas;
+uniform sampler2DArray uTextureArray;
 
 void main()
 {
-	FragColor = texture(uAtlas, vTexCoord);
+	FragColor = texture(uTextureArray, vTexCoord);
 }

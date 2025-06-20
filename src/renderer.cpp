@@ -24,6 +24,11 @@ bool Renderer::init()
 	{
 		return true;
 	}
+
+	// Set the OpenGL version and profile
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
    
 	// Initialize GLFW
 	if (!glfwInit())
@@ -57,16 +62,19 @@ bool Renderer::init()
 
 	// Texture atlas initialization
 	Texture textureAtlas;
-	bool textureLoaded = textureAtlas.loadFromFile(VOXL_RES_DIR "/textures/default_texture.png");
+	bool textureLoaded = textureAtlas.loadTextureArrayFromFile(
+		VOXL_RES_DIR "/textures/default_texture.png",
+		Atlas::COLS, Atlas::ROWS
+	);
 	if (!textureLoaded) {
 		std::cerr << "Failed to load texture atlas" << std::endl;
 		return false;
 	}
 	
 	// Set the texture uniform in the shader
-	textureAtlas.bind(0);
+	textureAtlas.bind(1);
 	shader->bind();
-	shader->setUniform1i("uAtlas", 0);
+	shader->setUniform1i("uTextureArray", 1);
 
     
 	// Backface culling

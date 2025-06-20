@@ -20,6 +20,7 @@ enum class BlockType {
 
 struct AtlasTile {
 	glm::vec2 uv00, uv10, uv11, uv01;
+	int   col, row;
 };
 
 // Struct defining the texture atlas
@@ -36,8 +37,14 @@ struct Atlas {
 		  {u0,      v0    },
 		  {u0 + du,   v0    },
 		  {u0 + du,   v0 + dv },
-		  {u0,      v0 + dv }
+		  {u0,      v0 + dv },
+		  col, row
 		};
+	}
+
+	static inline int getLayer(BlockType type, const glm::vec3& dir) {
+		auto& t = getTile(type, dir);
+		return t.row * COLS + t.col;
 	}
 
 	static inline int faceIndexForDir(const glm::vec3& dir) {
@@ -55,6 +62,8 @@ struct Atlas {
 	}
 
 	static inline const std::array<std::array<AtlasTile, FACE_COUNT>, TYPE_COUNT> blockUVs = {{
+		// Rows, Columns
+		
 		// BlockType::None  (0)
 		{{
 			makeRect(0,1), makeRect(0,1),
@@ -90,12 +99,12 @@ struct Atlas {
 		}},
 		// BlockType::Sand  (4)
 		{{
-			makeRect(3,15), // left
-			makeRect(3,15), // right
-			makeRect(3,15), // bottom
-			makeRect(3,15), // top
-			makeRect(3,15), // back
-			makeRect(3,15)  // front
+			makeRect(3,14), // left
+			makeRect(3,14), // right
+			makeRect(3,14), // bottom
+			makeRect(3,14), // top
+			makeRect(3,14), // back
+			makeRect(3,14)  // front
 		}},
 		// BlockType::Wood  (5)
 		{{

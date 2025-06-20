@@ -73,7 +73,7 @@ public:
 		m_normals = normals;
 	}
 
-	void setTexCoords(const std::vector<glm::vec2>& texCoords) {
+	void setTexCoords(const std::vector<glm::vec3>& texCoords) {
 		m_texCoords = texCoords;
 	}
 
@@ -87,7 +87,7 @@ private:
 	std::vector<glm::vec3> m_vertices;
 	std::vector<glm::vec3> m_normals;
 	std::vector<glm::vec4> m_colors;
-    std::vector<glm::vec2> m_texCoords;
+    std::vector<glm::vec3> m_texCoords;
 
 	std::vector<unsigned int> m_indices;
 
