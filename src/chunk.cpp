@@ -61,7 +61,7 @@ void Chunk::generate()
     BlockType type = BlockType::None;
     fnl_state noise = fnlCreateState();
     noise.noise_type = FNL_NOISE_PERLIN;
-    noise.frequency = 0.025f;
+    noise.frequency = 0.015f;
 
     for (int x = 0; x < CHUNK_SIZE; ++x) {
         for (int z = 0; z < CHUNK_SIZE; ++z) {

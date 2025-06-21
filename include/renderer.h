@@ -30,4 +30,8 @@ private:
 	World* world; // Reference to the world object
 
 	std::unique_ptr<Shader> shader;
+
+	void render();
+	void renderUI();
+	void swapBuffers();
 };

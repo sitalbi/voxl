@@ -3,6 +3,8 @@
 #include <iostream>
 #include "voxl.h"
 #include <texture.h>
+#include <imgui.h>
+#include <imgui_impl_opengl3.h>
 
 
 Renderer::Renderer() : window(nullptr)
@@ -95,7 +97,20 @@ bool Renderer::init()
 
 void Renderer::update(float deltaTime)
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	render();
+	renderUI();
+	swapBuffers();
+}
+
+void Renderer::shutdown()
+{
+	shader->unbind();
+	glfwDestroyWindow(window);
+}
+
+void Renderer::render()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Shader uniforms
 	shader->bind();
@@ -128,13 +143,16 @@ void Renderer::update(float deltaTime)
 		glEnable(GL_CULL_FACE);
 	}
 
-    glfwSwapBuffers(window);
-
-    glfwPollEvents();
+	
 }
 
-void Renderer::shutdown()
+void Renderer::renderUI()
 {
-	shader->unbind();
-	glfwDestroyWindow(window);
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void Renderer::swapBuffers()
+{
+	glfwSwapBuffers(window);
 }

@@ -7,6 +7,8 @@
 #include <player.h>
 #include <unordered_map>
 #include <iostream>
+#include <queue>
+#include <set>
 
 struct ChunkHash {
 	std::size_t operator()(const glm::ivec3& pos) const {
@@ -27,6 +29,9 @@ public:
 	virtual void update(float deltaTime) override;
 	virtual void shutdown() override;
 
+	void loadChunks(glm::vec3 playerPosition);
+	void unloadChunks(glm::vec3 playerPosition);
+
 	void setPlayer(Player* player) {
 		m_player = player;
 	}
@@ -36,7 +41,7 @@ public:
 		auto it = m_chunks.find(pos);
 		if (it == m_chunks.end()) {
 			m_chunks[pos] = chunk; // Store the Chunk pointer
-			m_updateList.push_back(chunk); // Add to update list
+			m_updateList.insert(chunk); // Add to update list
 		}
 		else {
 			std::cerr << "A Chunk already exists at this location in the world!" << std::endl;
@@ -60,10 +65,12 @@ public:
 	Player* getPlayer() const { return m_player; }
 
 private:
+	int m_meshesGenerated = 0;
+	int m_maxMeshesPerFrame = 2;
 
 	Player* m_player;
 
-	std::vector<Chunk*> m_updateList; 
+	std::set<Chunk*> m_updateList; 
 
 	// For the moment we just store a single cube to test
 	std::unique_ptr<Chunk> m_chunk;

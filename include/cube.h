@@ -12,6 +12,7 @@ enum class BlockType {
 	Dirt,
 	Stone,
 	Sand,
+	Tree,
 	Wood,
 	Water,
 	Snow,
@@ -106,16 +107,25 @@ struct Atlas {
 			makeRect(3,14), // back
 			makeRect(3,14)  // front
 		}},
-		// BlockType::Wood  (5)
+		// BlockType::Tree  (5)
+		{{
+			makeRect(4,14), // left
+			makeRect(4,14), // right
+			makeRect(5,15), // bottom
+			makeRect(5,15), // top
+			makeRect(4,14), // back
+			makeRect(4,14)  // front
+		}},
+		// BlockType::Wood  (6)
 		{{
 			makeRect(4,15), // left
 			makeRect(4,15), // right
-			makeRect(5,15), // bottom
-			makeRect(5,15), // top
+			makeRect(4,15), // bottom
+			makeRect(4,15), // top
 			makeRect(4,15), // back
 			makeRect(4,15)  // front
 		}},
-		// BlockType::Water (6)
+		// BlockType::Water (7)
 		{{
 			makeRect(0,1), // left
 			makeRect(0,1), // right
@@ -124,7 +134,7 @@ struct Atlas {
 			makeRect(0,1), // back
 			makeRect(0,1)  // front
 		}},
-		// BlockType::Snow  (7)
+		// BlockType::Snow  (8)
 		{{
 			makeRect(2,11), // left
 			makeRect(2,11), // right

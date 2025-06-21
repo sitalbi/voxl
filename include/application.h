@@ -25,6 +25,10 @@ private:
 	double lastTime = 0.0f;
 	double currentTime = 0.0f;
 
+	void initUI();
+	void updateUI();
+
 	static void mouseCallback(GLFWwindow* window, double xpos, double ypos);
 	void mouseCallbackInstance(double xpos, double ypos);
+
 };

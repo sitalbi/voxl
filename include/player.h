@@ -19,7 +19,7 @@ public:
 
     //bool rayCast(const ChunkManager& chunkManager, float maxDistance, glm::vec3& outBlockPosition, glm::vec3& outNormal) const;
 
-    glm::vec3 getPosition() const { return m_position; }
+    const glm::vec3& getPosition() const { return m_position; }
 
 	glm::mat4 getView() const {
 		return m_camera->getViewMatrix();

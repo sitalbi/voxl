@@ -20,43 +20,91 @@ bool World::init()
 {
 	if (m_isInitialized)
 	{
-		return true;
+		return false;
 	}
 
-	int numChunks = 3; 
-
-	// intit chunks 
-	for (int x = 0; x < numChunks; ++x)
-	{
-		for (int z = 0; z < numChunks; ++z)
-		{
-			Chunk* newChunk = new Chunk(x, 0, z, this);
-			m_chunks.insert({ glm::ivec3(x, 0, z), newChunk });
-			newChunk->generate();
-			m_updateList.push_back(newChunk);
-		}
-	}
 	
 	return true;
 }
 
 void World::update(float deltaTime)
 {
-	// update chunks
-	for (auto chunk : m_updateList)
-	{
-		chunk->generateGreedyMesh();
-	}
+	loadChunks(m_player->getPosition());
+	unloadChunks(m_player->getPosition());
 
-	if (m_updateList.size() > 0)
+	// update chunks
+	for (auto& chunk : m_updateList)
 	{
-		m_updateList.clear();
+		if (chunk) {
+			chunk->generateGreedyMesh();
+		}
 	}
+	m_updateList.clear();
 }
 
 void World::shutdown()
 {
 
+}
+
+void World::loadChunks(glm::vec3 playerPosition)
+{
+	// Load chunks around the player
+	int playerChunkX = static_cast<int>(playerPosition.x) / Chunk::CHUNK_SIZE;
+	int playerChunkZ = static_cast<int>(playerPosition.z) / Chunk::CHUNK_SIZE;
+
+
+	for (int x = playerChunkX - 8; x < playerChunkX + 8; x++)
+	{
+		for (int z = playerChunkZ - 8; z < playerChunkZ + 8; z++)
+		{
+			glm::ivec3 chunkPos(x, 0, z);
+			if (m_chunks.find(chunkPos) == m_chunks.end()) {
+				Chunk* chunk = new Chunk(x, 0, z, this);
+				chunk->generate();
+				m_chunks[chunkPos] = chunk;
+				m_updateList.insert(chunk);
+
+				// Update neighboring chunks
+				std::vector<glm::ivec3> neighborsPos = {
+					glm::ivec3(x - 1, 0, z),
+					glm::ivec3(x + 1, 0, z),
+					glm::ivec3(x, 0, z - 1),
+					glm::ivec3(x, 0, z + 1)
+				};
+
+				for (const auto& pos : neighborsPos) {
+					if (m_chunks.find(pos) != m_chunks.end()) {
+						Chunk* neighborChunk = m_chunks[pos];
+						if (neighborChunk) {
+							m_updateList.insert(neighborChunk);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void World::unloadChunks(glm::vec3 playerPosition)
+{
+	// Unload chunks that are too far away from the player
+	int playerChunkX = static_cast<int>(playerPosition.x) / Chunk::CHUNK_SIZE;
+	int playerChunkZ = static_cast<int>(playerPosition.z) / Chunk::CHUNK_SIZE;
+	std::vector<glm::ivec3> chunksToRemove;
+	for (auto& chunk : m_chunks)
+	{
+		int chunkX = chunk.second->getPosition().x / Chunk::CHUNK_SIZE;
+		int chunkZ = chunk.second->getPosition().z / Chunk::CHUNK_SIZE;
+		if (abs(chunkX - playerChunkX) > 8 || abs(chunkZ - playerChunkZ) > 8)
+		{
+			chunksToRemove.push_back(glm::ivec3(chunkX, 0, chunkZ));
+		}
+	}
+	for (auto& chunk : chunksToRemove)
+	{
+		m_chunks.erase(chunk);
+	}
 }
 
 const Chunk* World::getChunk(int x, int y, int z) const
