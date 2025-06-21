@@ -2,10 +2,15 @@
 #include <iostream> 
 #define FNL_IMPL
 #include "FastNoiseLite.h"
+#include <GLFW/glfw3.h>
 
-Chunk::Chunk(int x, int y, int z)
-	: m_x(x), m_y(y), m_z(z), m_indexCount(0)
+Chunk::Chunk(int x, int y, int z, World* world)
+	: m_indexCount(0)
 {
+	m_x = x * CHUNK_SIZE;
+	m_y = y * CHUNK_HEIGHT;
+	m_z = z * CHUNK_SIZE;
+	m_world = world;
 }
 
 Chunk::Chunk(const Chunk* chunk)
@@ -62,7 +67,11 @@ void Chunk::generate()
             }
         }
     }
+
+	float startTime = glfwGetTime();
     generateGreedyMesh();
+	float endTime = glfwGetTime();
+	std::cout << "Chunk generated in " << (endTime - startTime) * 1000.0f << " ms" << std::endl;
 }
 
 void Chunk::generateGreedyMesh()
@@ -102,7 +111,7 @@ void Chunk::processDirection(const glm::vec3& dir,
     std::vector<glm::vec3>& textures,
     std::vector<unsigned int>& indices)
 {
-    std::unordered_set<glm::ivec3> visited;
+    memset(m_visited, false, sizeof(m_visited));
     std::vector<Quad> quads;
 
     for (int x = 0; x < CHUNK_SIZE; ++x) {
@@ -111,14 +120,14 @@ void Chunk::processDirection(const glm::vec3& dir,
                 glm::ivec3 currentPos(x, y, z);
                 BlockType blockType = cubes[x][y][z];
 
-                if (visited.contains(currentPos) || !isBlockFaceVisible(x, y, z, dir, blockType)) {
+                if (m_visited[x][y][z] || !isBlockFaceVisible(x, y, z, dir, blockType)) {
                     continue;
                 }
 
-                visited.insert(currentPos);
+				m_visited[x][y][z] = true; // Mark as visited
 
                 // Find the dimensions to expand based on direction
-                auto [width, height] = expandQuad(currentPos, dir, blockType, visited);
+                auto [width, height] = expandQuad(currentPos, dir, blockType);
 
                 quads.push_back({ glm::vec3(x, y, z), glm::vec2(width, height), dir, blockType });
             }
@@ -132,7 +141,7 @@ void Chunk::processDirection(const glm::vec3& dir,
 }
 
 std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec3& dir,
-    BlockType blockType, std::unordered_set<glm::ivec3>& visited)
+    BlockType blockType)
 {
     int width = 1, height = 1;
 
@@ -145,13 +154,13 @@ std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec
         glm::ivec3 nextPos = startPos + widthAxis * width;
 
         if (!isValidPosition(nextPos) ||
-            visited.contains(nextPos) ||
+            m_visited[nextPos.x][nextPos.y][nextPos.z] ||
             cubes[nextPos.x][nextPos.y][nextPos.z] != blockType ||
             !isBlockFaceVisible(nextPos.x, nextPos.y, nextPos.z, dir, blockType)) {
             break;
         }
 
-        visited.insert(nextPos);
+		m_visited[nextPos.x][nextPos.y][nextPos.z] = true; // Mark as visited
         width++;
     }
 
@@ -164,7 +173,7 @@ std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec
             glm::ivec3 checkPos = startPos + widthAxis * w + heightAxis * h;
 
             if (!isValidPosition(checkPos) ||
-                visited.contains(checkPos) ||
+                m_visited[checkPos.x][checkPos.y][checkPos.z] ||
                 cubes[checkPos.x][checkPos.y][checkPos.z] != blockType ||
                 !isBlockFaceVisible(checkPos.x, checkPos.y, checkPos.z, dir, blockType)) {
                 rowGood = false;
@@ -177,7 +186,7 @@ std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec
             // Mark entire row as visited
             for (int w = 0; w < width; w++) {
                 glm::ivec3 markPos = startPos + widthAxis * w + heightAxis * h;
-                visited.insert(markPos);
+				m_visited[markPos.x][markPos.y][markPos.z] = true; // Mark as visited
             }
         }
         else {
@@ -351,7 +360,7 @@ void Chunk::generateQuadGeometry(const Quad& quad,
 }
 
 
-bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType)
+inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType)
 {
     if (faceType == BlockType::None) return false;
 

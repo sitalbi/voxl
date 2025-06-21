@@ -10,6 +10,20 @@ Application::Application()
 
 Application::~Application()
 {
+	if (world) {
+		delete world;
+		world = nullptr;
+	}
+	if (renderer) {
+		renderer->shutdown();
+		renderer.reset();
+	}
+	if (player) {
+		delete player;
+		player = nullptr;
+	}
+	glfwTerminate();
+	std::cout << "Application shutdown successfully." << std::endl;
 }
 
 void Application::init()
@@ -17,15 +31,15 @@ void Application::init()
 	renderer = std::make_unique<Renderer>();
 	renderer->init();
 
-	world = std::make_unique<World>();
+	world = new World();
 	world->init();
 	renderer->setWorld(world);
 
-	player = std::make_shared<Player>(glm::vec3(0.0f, 0.0f, 5.0f));
+	player = new Player(glm::vec3(0.0f, 0.0f, 5.0f));
 	world->setPlayer(player);
 
 	// Window settings
-	glfwSetWindowUserPointer(renderer->window, player.get());
+	glfwSetWindowUserPointer(renderer->window, player);
 	glfwSetCursorPosCallback(renderer->window, mouseCallback);
 	glfwSetInputMode(renderer->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }

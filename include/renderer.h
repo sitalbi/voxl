@@ -19,7 +19,7 @@ public:
 	virtual void  update(float deltaTime) override;
 	virtual void  shutdown() override;
 
-	void setWorld(std::shared_ptr<World> worldRef) {
+	void setWorld(World* worldRef) {
 		world = worldRef;
 	}
 
@@ -27,7 +27,7 @@ public:
 
 private:
 
-	std::shared_ptr<World> world; // Reference to the world object
+	World* world; // Reference to the world object
 
 	std::unique_ptr<Shader> shader;
 };

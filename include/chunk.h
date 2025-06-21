@@ -5,6 +5,8 @@
 #include <vector>
 #include <unordered_set>
 
+class World;
+
 namespace std {
 	template<> struct hash<glm::ivec3> {
 		size_t operator()(glm::ivec3 const& v) const noexcept {
@@ -24,7 +26,7 @@ public:
 	static const int CHUNK_SIZE = 32;
 	static const int CHUNK_HEIGHT = 64;
 
-	Chunk(int x = 0, int y = 0, int z = 0);
+	Chunk(int x = 0, int y = 0, int z = 0, World* world = nullptr);
 	Chunk(const Chunk* chunk);
 	~Chunk();
 
@@ -42,7 +44,7 @@ public:
 	void generateGreedyMesh();
 
 
-	bool isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType);
+	inline bool isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType);
 
 	void draw() const;
 
@@ -50,6 +52,9 @@ private:
 	int m_x, m_y, m_z;
 	int m_indexCount;
 
+	bool m_visited[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
+
+	World* m_world;
 
 	std::unique_ptr<Mesh> m_mesh;
 	std::unique_ptr<Mesh> m_waterMesh;
@@ -58,7 +63,7 @@ private:
 
 
 	std::pair<int, int> expandQuad(const glm::ivec3& startPos, const glm::vec3& dir,
-		BlockType blockType, std::unordered_set<glm::ivec3>& visited);
+		BlockType blockType);
 
 	void getExpansionAxes(const glm::vec3& dir, glm::ivec3& widthAxis, glm::ivec3& heightAxis);
 

@@ -18,8 +18,8 @@ public:
 private:
 
 	std::unique_ptr<Renderer> renderer;
-	std::shared_ptr<World> world;
-	std::shared_ptr<Player> player;
+	World* world;
+	Player* player;
 
 	float deltaTime = 0.0f; // Time between current frame and last frame	
 	double lastTime = 0.0f;

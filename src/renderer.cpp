@@ -53,7 +53,7 @@ bool Renderer::init()
 		return false;
 	}
 
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClearColor(0.1f, 0.7f, 1.0f, 1.0f);
 	
 	// Shader initialization
 	shader = std::make_unique<Shader>(VOXL_RES_DIR "/shaders/default_vert.glsl", VOXL_RES_DIR"/shaders/default_frag.glsl");
@@ -103,7 +103,19 @@ void Renderer::update(float deltaTime)
 	shader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
 
 	// Draw the chunk
-	world->getChunk()->draw();
+	for (Chunk* chunk : world->getChunks())
+	{
+		if (chunk)
+		{
+			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getPosition()));
+			chunk->draw();
+		}
+	}
+	// Draw the single chunk
+	/*if (world->getChunk())
+	{
+		world->getChunk()->draw();
+	}*/
 
 	// Player wireframe mode
 	if (world->getPlayer()->wireframeMode) {
