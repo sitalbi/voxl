@@ -103,8 +103,9 @@ void Renderer::update(float deltaTime)
 	shader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
 
 	// Draw the chunk
-	for (Chunk* chunk : world->getChunks())
+	for (auto& chunkData : world->getChunks())
 	{
+		auto& chunk = chunkData.second;
 		if (chunk)
 		{
 			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getPosition()));

@@ -38,7 +38,7 @@ bool Texture::loadFromFile(const char* filePath)
 bool Texture::loadTextureArrayFromFile(const char* filePath,
     int cols, int rows)
 {
-    // 1) load the entire atlas
+    // load atlas
     int atlasW, atlasH, channels;
     stbi_set_flip_vertically_on_load(true);
     unsigned char* atlasData =
@@ -48,7 +48,6 @@ bool Texture::loadTextureArrayFromFile(const char* filePath,
         return false;
     }
 
-    // 2) compute per-tile size
     if (atlasW % cols != 0 || atlasH % rows != 0) {
         std::cerr << "Atlas size " << atlasW << "Å~" << atlasH
             << " not divisible by " << cols << "Å~" << rows << "\n";
@@ -59,17 +58,19 @@ bool Texture::loadTextureArrayFromFile(const char* filePath,
     int tileH = atlasH / rows;
     int layerCount = cols * rows;
 
-    // 3) create the textureÅ]array
+    int mipLevels = static_cast<int>(std::floor(std::log2(std::max(tileW, tileH)))) + 1;
+
+    // Create the textureÅ]array
     glGenTextures(1, &m_textureID);
     glBindTexture(GL_TEXTURE_2D_ARRAY, m_textureID);
-    // allocate storage: 1 mip, RGBA8
+    
     glTexStorage3D(GL_TEXTURE_2D_ARRAY,
-        1,
+        mipLevels,  
         GL_RGBA8,
         tileW, tileH,
         layerCount);
 
-    // 4) carve each atlas cell into its own layer
+    // Set each atlas cell to a layer
     std::vector<unsigned char> slice(tileW * tileH * 4);
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
@@ -81,7 +82,7 @@ bool Texture::loadTextureArrayFromFile(const char* filePath,
                 memcpy(dst, src, tileW * 4);
             }
             glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                0,      // mip
+                0,
                 0, 0, layer,
                 tileW, tileH, 1,
                 GL_RGBA, GL_UNSIGNED_BYTE,
@@ -89,8 +90,11 @@ bool Texture::loadTextureArrayFromFile(const char* filePath,
         }
     }
 
-    // 5) set params
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    // Generate mipmaps
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+
+	// Texture parameters
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);

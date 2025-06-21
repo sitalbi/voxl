@@ -35,7 +35,7 @@ void Application::init()
 	world->init();
 	renderer->setWorld(world);
 
-	player = new Player(glm::vec3(0.0f, 0.0f, 5.0f));
+	player = new Player(glm::vec3(32.0f, 68.0f, 32.0f));
 	world->setPlayer(player);
 
 	// Window settings
@@ -54,9 +54,9 @@ void Application::run()
 		deltaTime = static_cast<float>(currentTime - lastTime);
 		lastTime = currentTime;
 
-		renderer->update(deltaTime);
 		world->update(deltaTime);
 		player->update(deltaTime);
+		renderer->update(deltaTime);
 	}
 }
 

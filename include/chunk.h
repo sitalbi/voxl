@@ -40,11 +40,14 @@ public:
 
 	void setBlockType(int x, int y, int z, BlockType type);
 
+	BlockType getBlockType(int x, int y, int z) const;
+	BlockType getBlockTypeWorldPos(int worldX, int worldY, int worldZ) const;
+
 	void generate();
 	void generateGreedyMesh();
 
 
-	inline bool isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType);
+	inline bool isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType) const;
 
 	void draw() const;
 

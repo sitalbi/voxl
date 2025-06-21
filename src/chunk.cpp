@@ -3,6 +3,7 @@
 #define FNL_IMPL
 #include "FastNoiseLite.h"
 #include <GLFW/glfw3.h>
+#include "world.h"
 
 Chunk::Chunk(int x, int y, int z, World* world)
 	: m_indexCount(0)
@@ -34,6 +35,24 @@ Chunk::~Chunk()
 
 void Chunk::setBlockType(int x, int y, int z, BlockType type)
 {
+}
+
+BlockType Chunk::getBlockType(int x, int y, int z) const
+{
+    if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_SIZE) {
+        return BlockType::None;
+    }
+    return cubes[x][y][z];
+}
+
+BlockType Chunk::getBlockTypeWorldPos(int worldX, int worldY, int worldZ) const
+{
+    // Convert world coordinates to local chunk coordinates
+    int localX = worldX - m_x;
+    int localY = worldY - m_y;
+    int localZ = worldZ - m_z;
+
+	return getBlockType(localX, localY, localZ);
 }
 
 void Chunk::generate()
@@ -68,10 +87,7 @@ void Chunk::generate()
         }
     }
 
-	float startTime = glfwGetTime();
-    generateGreedyMesh();
-	float endTime = glfwGetTime();
-	std::cout << "Chunk generated in " << (endTime - startTime) * 1000.0f << " ms" << std::endl;
+	
 }
 
 void Chunk::generateGreedyMesh()
@@ -231,10 +247,7 @@ int Chunk::getMaxHeight(const glm::ivec3& startPos, const glm::ivec3& heightAxis
     return 0;
 }
 
-void Chunk::generateQuadGeometry(const Quad& quad,
-    std::vector<glm::vec3>& vertices,
-    std::vector<glm::vec3>& normals,
-    std::vector<glm::vec3>& textures,
+void Chunk::generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec3>& textures,
     std::vector<unsigned int>& indices)
 {
     glm::vec3 pos = quad.position;
@@ -360,7 +373,7 @@ void Chunk::generateQuadGeometry(const Quad& quad,
 }
 
 
-inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType)
+inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType) const
 {
     if (faceType == BlockType::None) return false;
 
@@ -368,12 +381,53 @@ inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir,
     int ny = y + static_cast<int>(dir.y);
     int nz = z + static_cast<int>(dir.z);
 
-    // if neighbor is out of chunk → face is visible
+    // if neighbor is out of chunk
     if (nx < 0 || nx >= CHUNK_SIZE ||
         ny < 0 || ny >= CHUNK_HEIGHT ||
         nz < 0 || nz >= CHUNK_SIZE)
     {
-        return true;
+        // Neighbor is outside this chunk - check adjacent chunk
+        const Chunk* neighbor = nullptr;
+        int neighborX = x, neighborY = y, neighborZ = z;
+
+        if (nx < 0) {
+            // Left boundary
+            neighbor = m_world->getChunk(m_x - CHUNK_SIZE, m_y, m_z);
+            neighborX = CHUNK_SIZE - 1;
+        }
+        else if (nx >= CHUNK_SIZE) {
+            // Right boundary
+            neighbor = m_world->getChunk(m_x + CHUNK_SIZE, m_y, m_z);
+            neighborX = 0;
+        }
+        else if (ny < 0) {
+            // Bottom boundary
+            neighbor = m_world->getChunk(m_x, m_y - CHUNK_HEIGHT, m_z);
+            neighborY = CHUNK_HEIGHT - 1;
+        }
+        else if (ny >= CHUNK_HEIGHT) {
+            // Top boundary
+            neighbor = m_world->getChunk(m_x, m_y + CHUNK_HEIGHT, m_z);
+            neighborY = 0;
+        }
+        else if (nz < 0) {
+            // Back boundary
+            neighbor = m_world->getChunk(m_x, m_y, m_z - CHUNK_SIZE);
+            neighborZ = CHUNK_SIZE - 1;
+        }
+        else if (nz >= CHUNK_SIZE) {
+            // Front boundary
+            neighbor = m_world->getChunk(m_x, m_y, m_z + CHUNK_SIZE);
+            neighborZ = 0;
+        }
+
+        if (neighbor) {
+            BlockType neighborBlockType = neighbor->cubes[neighborX][neighborY][neighborZ];
+            return (neighborBlockType == BlockType::None);
+        }
+        else {
+			return true;
+        }
     }
 
 	// if neighbor is in the chunk, check if it is empty
