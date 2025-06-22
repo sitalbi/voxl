@@ -41,7 +41,7 @@ void Mesh::createCube()
     glBindVertexArray(0);
 }
 
-void Mesh::createMesh()
+void Mesh::setupMesh()
 {
 	// Vertex array
 	glGenVertexArrays(1, &VAO);
@@ -79,11 +79,22 @@ void Mesh::createMesh()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), m_indices.data(), GL_STATIC_DRAW);
 	glBindVertexArray(0);
+
+	GLenum err;
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error: " << err << std::endl;
+	}
+	m_isSetup = err == GL_NO_ERROR;
 }
 
 void Mesh::draw() const
 {
-	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
-	glBindVertexArray(0);
+	if (m_isSetup) {
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
+		glBindVertexArray(0);
+	}
+	else {
+		std::cerr << "Mesh is not set up!" << std::endl;
+	}
 }

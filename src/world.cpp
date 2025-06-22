@@ -23,23 +23,23 @@ bool World::init()
 		return false;
 	}
 
-	
 	return true;
 }
 
 void World::update(float deltaTime)
 {
 	loadChunks(m_player->getPosition());
+
+
+	generateChunks();
+
+	setupChunks();
+
+	// todo: maybe make a render list for chunks to render
+
 	unloadChunks(m_player->getPosition());
 
-	// update chunks
-	for (auto& chunk : m_updateList)
-	{
-		if (chunk) {
-			chunk->generateGreedyMesh();
-		}
-	}
-	m_updateList.clear();
+	removeChunks();
 }
 
 void World::shutdown()
@@ -54,16 +54,16 @@ void World::loadChunks(glm::vec3 playerPosition)
 	int playerChunkZ = static_cast<int>(playerPosition.z) / Chunk::CHUNK_SIZE;
 
 
-	for (int x = playerChunkX - 8; x < playerChunkX + 8; x++)
+	for (int x = playerChunkX - CHUNK_LOAD_RADIUS; x < playerChunkX + CHUNK_LOAD_RADIUS; x++)
 	{
-		for (int z = playerChunkZ - 8; z < playerChunkZ + 8; z++)
+		for (int z = playerChunkZ - CHUNK_LOAD_RADIUS; z < playerChunkZ + CHUNK_LOAD_RADIUS; z++)
 		{
 			glm::ivec3 chunkPos(x, 0, z);
 			if (m_chunks.find(chunkPos) == m_chunks.end()) {
 				Chunk* chunk = new Chunk(x, 0, z, this);
-				chunk->generate();
+				chunk->load();
 				m_chunks[chunkPos] = chunk;
-				m_updateList.insert(chunk);
+				m_chunksToGenerate.insert(chunk);
 
 				// Update neighboring chunks
 				std::vector<glm::ivec3> neighborsPos = {
@@ -77,7 +77,7 @@ void World::loadChunks(glm::vec3 playerPosition)
 					if (m_chunks.find(pos) != m_chunks.end()) {
 						Chunk* neighborChunk = m_chunks[pos];
 						if (neighborChunk) {
-							m_updateList.insert(neighborChunk);
+							m_chunksToGenerate.insert(neighborChunk);
 						}
 					}
 				}
@@ -91,19 +91,70 @@ void World::unloadChunks(glm::vec3 playerPosition)
 	// Unload chunks that are too far away from the player
 	int playerChunkX = static_cast<int>(playerPosition.x) / Chunk::CHUNK_SIZE;
 	int playerChunkZ = static_cast<int>(playerPosition.z) / Chunk::CHUNK_SIZE;
-	std::vector<glm::ivec3> chunksToRemove;
-	for (auto& chunk : m_chunks)
+	for (auto chunk : m_chunks)
 	{
 		int chunkX = chunk.second->getPosition().x / Chunk::CHUNK_SIZE;
 		int chunkZ = chunk.second->getPosition().z / Chunk::CHUNK_SIZE;
-		if (abs(chunkX - playerChunkX) > 8 || abs(chunkZ - playerChunkZ) > 8)
+		if (abs(chunkX - playerChunkX) > CHUNK_LOAD_RADIUS || abs(chunkZ - playerChunkZ) > CHUNK_LOAD_RADIUS)
 		{
-			chunksToRemove.push_back(glm::ivec3(chunkX, 0, chunkZ));
+			m_chunksToRemove.insert(chunk.second);
 		}
 	}
-	for (auto& chunk : chunksToRemove)
+}
+
+void World::generateChunks()
+{
+	m_chunksProcessed = 0;
+	auto it = m_chunksToGenerate.begin();
+	while (it != m_chunksToGenerate.end() && m_chunksProcessed < NUM_CHUNK_PER_FRAME)
 	{
-		m_chunks.erase(chunk);
+		Chunk* chunk = *it;
+		if (chunk) {
+			chunk->generateMeshData();
+			m_chunkMeshesToSetup.insert(chunk);
+			it = m_chunksToGenerate.erase(it); 
+			m_chunksProcessed++;
+		}
+		else {
+			it++;
+		}
+	}
+}
+
+void World::setupChunks()
+{
+	m_chunksProcessed = 0;
+	auto it = m_chunkMeshesToSetup.begin();
+	while (it != m_chunkMeshesToSetup.end() && m_chunksProcessed < NUM_CHUNK_PER_FRAME)
+	{
+		Chunk* chunk = *it;
+		if (chunk) {
+			chunk->getMesh()->setupMesh();
+			it = m_chunkMeshesToSetup.erase(it); 
+			m_chunksProcessed++;
+		}
+		else {
+			it++;
+		}
+	}
+}
+
+void World::removeChunks()
+{
+	m_chunksProcessed = 0;
+	auto it = m_chunksToRemove.begin();
+	while (it != m_chunksToRemove.end() && m_chunksProcessed < NUM_CHUNK_PER_FRAME)
+	{
+		Chunk* chunk = *it;
+		if (chunk) {
+			delete m_chunks[glm::ivec3(chunk->getPosition())];
+			m_chunks.erase(glm::ivec3(chunk->getPosition()));
+			it = m_chunksToRemove.erase(it);
+			m_chunksProcessed++;
+		}
+		else {
+			it++;
+		}
 	}
 }
 

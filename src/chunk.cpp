@@ -55,7 +55,7 @@ BlockType Chunk::getBlockTypeWorldPos(int worldX, int worldY, int worldZ) const
 	return getBlockType(localX, localY, localZ);
 }
 
-void Chunk::generate()
+void Chunk::load()
 {
     m_indexCount = 0;
     BlockType type = BlockType::None;
@@ -90,7 +90,7 @@ void Chunk::generate()
 	
 }
 
-void Chunk::generateGreedyMesh()
+void Chunk::generateMeshData()
 {
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
@@ -118,7 +118,7 @@ void Chunk::generateGreedyMesh()
     m_mesh->setTexCoords(textures);
     m_mesh->setIndices(indices);
     m_indexCount = indices.size();
-    m_mesh->createMesh();
+	m_mesh->m_isSetup = false; // Reset setup state
 }
 
 void Chunk::processDirection(const glm::vec3& dir,

@@ -24,7 +24,7 @@ class Chunk {
 
 public:
 	static const int CHUNK_SIZE = 32;
-	static const int CHUNK_HEIGHT = 64;
+	static const int CHUNK_HEIGHT = 48;
 
 	Chunk(int x = 0, int y = 0, int z = 0, World* world = nullptr);
 	Chunk(const Chunk* chunk);
@@ -43,8 +43,11 @@ public:
 	BlockType getBlockType(int x, int y, int z) const;
 	BlockType getBlockTypeWorldPos(int worldX, int worldY, int worldZ) const;
 
-	void generate();
-	void generateGreedyMesh();
+	// Load chunk data from noise function
+	void load();
+
+	// Generate mesh data for the chunk using greedy meshing
+	void generateMeshData();
 
 
 	inline bool isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType) const;

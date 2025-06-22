@@ -61,7 +61,7 @@ public:
 
 	void createCube();
 
-	void createMesh();
+	void setupMesh();
 
     void draw() const;
 
@@ -81,6 +81,7 @@ public:
 		m_indices = indices;
 	}
 
+	bool m_isSetup = false;
 private:
 	unsigned int VAO, VBO, EBO, NBO, TBO;
 
@@ -90,7 +91,6 @@ private:
     std::vector<glm::vec3> m_texCoords;
 
 	std::vector<unsigned int> m_indices;
-
 
 };
 

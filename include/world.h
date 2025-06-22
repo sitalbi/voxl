@@ -20,6 +20,9 @@ struct ChunkHash {
 
 class World : public ISubsystem
 {
+static const int NUM_CHUNK_PER_FRAME = 2;
+static const int CHUNK_LOAD_RADIUS = 8;
+
 public:
 	World();
 	~World() override;
@@ -31,6 +34,9 @@ public:
 
 	void loadChunks(glm::vec3 playerPosition);
 	void unloadChunks(glm::vec3 playerPosition);
+	void generateChunks();
+	void setupChunks();
+	void removeChunks();
 
 	void setPlayer(Player* player) {
 		m_player = player;
@@ -41,7 +47,7 @@ public:
 		auto it = m_chunks.find(pos);
 		if (it == m_chunks.end()) {
 			m_chunks[pos] = chunk; // Store the Chunk pointer
-			m_updateList.insert(chunk); // Add to update list
+			m_chunksToGenerate.insert(chunk); // Add to update list
 		}
 		else {
 			std::cerr << "A Chunk already exists at this location in the world!" << std::endl;
@@ -65,12 +71,13 @@ public:
 	Player* getPlayer() const { return m_player; }
 
 private:
-	int m_meshesGenerated = 0;
-	int m_maxMeshesPerFrame = 2;
+	int m_chunksProcessed = 0;
 
 	Player* m_player;
 
-	std::set<Chunk*> m_updateList; 
+	std::set<Chunk*> m_chunksToGenerate; 
+	std::set<Chunk*> m_chunksToRemove; 
+	std::set<Chunk*> m_chunkMeshesToSetup; 
 
 	// For the moment we just store a single cube to test
 	std::unique_ptr<Chunk> m_chunk;
