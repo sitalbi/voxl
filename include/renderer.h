@@ -24,12 +24,16 @@ public:
 	}
 
 	GLFWwindow* window;
+	unsigned int m_crosshairTextureId = 0;
 
 private:
 
 	World* world; // Reference to the world object
 
 	std::unique_ptr<Shader> shader;
+	std::unique_ptr<Shader> highlightShader;
+	std::unique_ptr<Mesh> cubeMesh;
+
 
 	void render();
 	void renderUI();

@@ -16,6 +16,7 @@ enum class BlockType {
 	Wood,
 	Water,
 	Snow,
+	Leaves,
 	NUM
 };
 
@@ -111,8 +112,8 @@ struct Atlas {
 		{{
 			makeRect(4,14), // left
 			makeRect(4,14), // right
-			makeRect(5,15), // bottom
-			makeRect(5,15), // top
+			makeRect(5,14), // bottom
+			makeRect(5,14), // top
 			makeRect(4,14), // back
 			makeRect(4,14)  // front
 		}},
@@ -127,12 +128,12 @@ struct Atlas {
 		}},
 		// BlockType::Water (7)
 		{{
-			makeRect(0,1), // left
-			makeRect(0,1), // right
-			makeRect(0,1), // bottom
-			makeRect(0,1), // top
-			makeRect(0,1), // back
-			makeRect(0,1)  // front
+			makeRect(15,3), // left
+			makeRect(15,3), // right
+			makeRect(15,3), // bottom
+			makeRect(15,3), // top
+			makeRect(15,3), // back
+			makeRect(15,3)  // front
 		}},
 		// BlockType::Snow  (8)
 		{{
@@ -142,6 +143,15 @@ struct Atlas {
 			makeRect(2,11), // top
 			makeRect(2,11), // back
 			makeRect(2,11)  // front
+		}},
+		// BlockType::Leaves  (9)
+		{{
+			makeRect(4,12), // left
+			makeRect(4,12), // right
+			makeRect(4,12), // bottom
+			makeRect(4,12), // top
+			makeRect(4,12), // back
+			makeRect(4,12)  // front
 		}}
 	}};
 
@@ -153,7 +163,7 @@ public:
 	~Cube();
 
 	BlockType getType() const { return m_type; }
-	glm::vec3 getPosition() const { return m_position; }
+	glm::vec3 getWorldPosition() const { return m_position; }
 	glm::mat4 getModelMatrix() const { return m_modelMatrix; }
 
 	void draw() const;

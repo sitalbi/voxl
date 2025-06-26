@@ -65,39 +65,41 @@ public:
 
     void draw() const;
 
-	void setVertices(const std::vector<glm::vec3>& vertices) {
-		m_vertices = vertices;
+	void setVertices(const std::vector<glm::vec3>& vert) {
+		vertices = vert;
 	}
 
-	void setNormals(const std::vector<glm::vec3>& normals) {
-		m_normals = normals;
+	void setNormals(const std::vector<glm::vec3>& norm) {
+		normals = norm;
 	}
 
-	void setTexCoords(const std::vector<glm::vec3>& texCoords) {
-		m_texCoords = texCoords;
+	void setTexCoords(const std::vector<glm::vec3>& tex) {
+		texCoords = tex;
 	}
 
-	void setIndices(const std::vector<unsigned int>& indices) {
-		m_indices = indices;
+	void setIndices(const std::vector<unsigned int>& ind) {
+		indices = ind;
 	}
 
 	bool m_isSetup = false;
+
+	std::vector<glm::vec3> vertices;
+	std::vector<glm::vec3> normals;
+	std::vector<glm::vec4> colors;
+    std::vector<glm::vec3> texCoords;
+
+	std::vector<unsigned int> indices;
+
 private:
 	unsigned int VAO, VBO, EBO, NBO, TBO;
 
-	std::vector<glm::vec3> m_vertices;
-	std::vector<glm::vec3> m_normals;
-	std::vector<glm::vec4> m_colors;
-    std::vector<glm::vec3> m_texCoords;
-
-	std::vector<unsigned int> m_indices;
 
 };
 
 enum class BlockType;
 struct Quad {
 	glm::vec3 position; // Position of the quad
-	glm::vec2 size;     // Size of the quad (width, height)
-    glm::vec3 direction;      // Direction of the quad (0-5 for each face)
-	BlockType type;    // Type of block (for texture mapping)
+	glm::vec2 size; // Size of the quad (width, height)
+    glm::vec3 direction; // Direction of the quad (0-5 for each face)
+	BlockType type; // Type of block (for texture mapping)
 };;

@@ -15,7 +15,7 @@ public:
 	Texture();
 	~Texture();
 
-	bool loadFromFile(const char* filePath);
+	static unsigned int loadFromFile(const char* filePath);
 	bool loadTextureArrayFromFile(const char* filePath, int cols, int rows);
 	void bind(unsigned int slot = 0) const;
 	void unbind() const;

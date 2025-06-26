@@ -1,9 +1,13 @@
 #include "player.h"
 #include "voxl.h"
 #include <glm/gtc/matrix_transform.hpp> 
+#include <unordered_set>
+#include "world.h"
+#include <iostream>
 
-Player::Player(glm::vec3 position) : m_position(position)
+Player::Player(glm::vec3 position, World* world) : m_position(position)
 {
+	m_world = world;
 	m_camera = std::make_unique<Camera>(window_width, window_height, glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
 	m_speed = m_defaultSpeed;
 
@@ -27,6 +31,8 @@ Player::Player(glm::vec3 position) : m_position(position)
 
 void Player::update(float deltaTime)
 {
+	m_blockFound = rayCast(10.0f, m_blockPosition, m_blockNormal);
+
 	// Process user input to update velocity
 	processInput(glfwGetCurrentContext(), deltaTime);
 
@@ -163,4 +169,52 @@ void Player::onPressedKey(int key, const std::function<void()>& callback)
         callback();
     }
     m_keyStates[key] = isPressed;
+}
+
+
+bool Player::rayCast(float maxDistance, glm::vec3& outBlockPosition, glm::vec3& outNormal) const
+{
+    
+    glm::vec3 rayOrigin = m_camera->getWorldPosition();
+    glm::vec3 rayDirection = glm::normalize(m_camera->getForward());
+    float step = 0.1f;
+
+    glm::vec3 currentPos;
+    for (float distance = 0.0f; distance < maxDistance; distance += step) {
+        currentPos = rayOrigin + rayDirection * distance;
+
+        // Check if the chunk exists
+        Chunk* chunk = m_world->getChunkWorldPos(currentPos.x, currentPos.y, currentPos.z);
+        if (chunk == nullptr) {
+            return false;
+        }
+
+        // Get the local block position within the chunk
+        int blockX = glm::mod(glm::floor(currentPos.x), static_cast<float>(Chunk::CHUNK_SIZE));
+        int blockY = glm::mod(glm::floor(currentPos.y), static_cast<float>(Chunk::CHUNK_HEIGHT));
+        int blockZ = glm::mod(glm::floor(currentPos.z), static_cast<float>(Chunk::CHUNK_SIZE));
+
+        glm::ivec3 blockPos = glm::ivec3(blockX, blockY, blockZ);
+
+        // Check if there is a block at this position
+        if (m_nonSelectableBlockTypes.find(chunk->cubes[blockPos.x][blockPos.y][blockPos.z]) == m_nonSelectableBlockTypes.end()) {
+            // Determine which face is hit based on ray direction
+            glm::vec3 blockCenter = chunk->getWorldPosition() + glm::vec3(blockPos) + glm::vec3(0.5f);
+            glm::vec3 delta = currentPos - blockCenter;
+
+            if (fabs(delta.x) > fabs(delta.y) && fabs(delta.x) > fabs(delta.z)) {
+                outNormal = glm::vec3(delta.x > 0 ? 1.0f : -1.0f, 0.0f, 0.0f);
+            }
+            else if (fabs(delta.y) > fabs(delta.x) && fabs(delta.y) > fabs(delta.z)) {
+                outNormal = glm::vec3(0.0f, delta.y > 0 ? 1.0f : -1.0f, 0.0f);
+            }
+            else {
+                outNormal = glm::vec3(0.0f, 0.0f, delta.z > 0 ? 1.0f : -1.0f);
+            }
+
+            outBlockPosition = blockCenter;
+            return true;
+        }
+    }
+    return false;
 }

@@ -6,20 +6,21 @@
 #include "glm/glm.hpp"
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <functional>
+
+class World;
 
 
 class Player {
 public:
-    Player(glm::vec3 position);
+    Player(glm::vec3 position, World* world);
 
     void update(float deltaTime);
     void processInput(GLFWwindow* window, float deltaTime);
     void processMouseMovement(double xpos, double ypos);
 
-    //bool rayCast(const ChunkManager& chunkManager, float maxDistance, glm::vec3& outBlockPosition, glm::vec3& outNormal) const;
-
-    const glm::vec3& getPosition() const { return m_position; }
+    const glm::vec3& getWorldPosition() const { return m_position; }
 
 	glm::mat4 getView() const {
 		return m_camera->getViewMatrix();
@@ -28,6 +29,19 @@ public:
 	glm::mat4 getProjection() const {
 		return m_camera->getProjectionMatrix();
 	}
+
+    glm::vec3 getBlockPosition() const {
+        if (m_blockFound) {
+            return m_blockPosition;
+        }
+        else {
+            return glm::vec3(0, 0, 0);
+        }
+    }
+
+    bool isBlockFound() const {
+        return m_blockFound;
+    }
 
     bool wireframeMode = false;
 
@@ -52,7 +66,7 @@ private:
     bool m_isFlying = true;
 
     float m_speed;
-    float m_defaultSpeed = 5.0f;
+    float m_defaultSpeed = 15.0f;
     float m_speedMultiplier = 1.0f;
     float m_defaultSpeedMultiplier = 1.0f;
     float m_gravity = -15.0f;
@@ -61,11 +75,19 @@ private:
     float m_height = 1.5f;
     float m_width = 0.25f;
 
+    std::unordered_set<BlockType> m_nonSelectableBlockTypes = { 
+        BlockType::Water, 
+        BlockType::None 
+    };
+
     std::unique_ptr<Camera> m_camera;
+    World* m_world;
 
     void updateCamera();
 
     void handleCollisions(float dx, float dy, float dz);
 
     void onPressedKey(int key, const std::function<void()>& callback);
+
+    bool rayCast(float maxDistance, glm::vec3& outBlockPosition, glm::vec3& outNormal) const;
 };

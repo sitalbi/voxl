@@ -17,7 +17,7 @@ public:
 		return glm::perspective(glm::radians(45.0f), static_cast<float>(m_width) / static_cast<float>(m_height), m_nearClippingPlane, m_farClippingPlane);
 	}
 
-	glm::vec3 getPosition() const { return m_position; }
+	glm::vec3 getWorldPosition() const { return m_position; }
 
 	glm::vec3 getForward() const { return m_forward; }
 	glm::vec3 getUp() const { return m_up; }
@@ -42,6 +42,6 @@ private:
 	float m_yaw;
 	float m_pitch;
 
-	float m_farClippingPlane = 500.0f;
+	float m_farClippingPlane = 1500.0f;
 	float m_nearClippingPlane = 0.1f;
 };

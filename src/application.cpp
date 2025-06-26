@@ -38,7 +38,7 @@ void Application::init()
 	world->init();
 	renderer->setWorld(world);
 
-	player = new Player(glm::vec3(32.0f, 68.0f, 32.0f));
+	player = new Player(glm::vec3(32.0f, 68.0f, 32.0f), world);
 	world->setPlayer(player);
 
 	// Window settings
@@ -96,7 +96,7 @@ void Application::updateUI()
 	ImGui::NewFrame();
 
 	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_Always);
 
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoResize |
@@ -107,10 +107,18 @@ void Application::updateUI()
 		ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
 
 		if (player) {
-			const glm::vec3& pos = player->getPosition();
+			const glm::vec3& pos = player->getWorldPosition();
 			ImGui::Text("Player World Position: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
 			ImGui::Text("Player Chunk Position: %d, %d, %d", (int)(pos.x / Chunk::CHUNK_SIZE), 0, (int)(pos.z / Chunk::CHUNK_SIZE));
+			ImGui::Text("Block Position:%.1f, %.1f, %.1f", player->getBlockPosition().x, player->getBlockPosition().y, player->getBlockPosition().z);
 		}
+
+		// Crosshair
+		ImGui::SetNextWindowPos(ImVec2(window_width / 2.0f, window_height / 2.0f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_Always);
+		ImGui::Begin("Crosshair", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs);
+		ImGui::Image((void*)(intptr_t)renderer->m_crosshairTextureId, ImVec2(20, 20));
+		ImGui::End();
 	}
 	ImGui::End();
 }

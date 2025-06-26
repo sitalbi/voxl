@@ -55,19 +55,25 @@ bool Renderer::init()
 		return false;
 	}
 
+	// Load crosshair texture
+	m_crosshairTextureId = Texture::loadFromFile(VOXL_RES_DIR "/textures/crosshair.png");
+
+	// Cube mesh
+	cubeMesh = std::make_unique<Mesh>();
+	cubeMesh->createCube();
+
+	// Set clear color
 	glClearColor(0.1f, 0.7f, 1.0f, 1.0f);
 	
 	// Shader initialization
 	shader = std::make_unique<Shader>(VOXL_RES_DIR "/shaders/default_vert.glsl", VOXL_RES_DIR"/shaders/default_frag.glsl");
-	shader->bind();
-	shader->setUniformMat4f("uModel", glm::mat4(1.0f));
+
+	highlightShader = std::make_unique<Shader>(VOXL_RES_DIR "/shaders/highlight_vert.glsl", VOXL_RES_DIR "/shaders/highlight_frag.glsl");
+	highlightShader->bind();
 
 	// Texture atlas initialization
 	Texture textureAtlas;
-	bool textureLoaded = textureAtlas.loadTextureArrayFromFile(
-		VOXL_RES_DIR "/textures/default_texture.png",
-		Atlas::COLS, Atlas::ROWS
-	);
+	bool textureLoaded = textureAtlas.loadTextureArrayFromFile(VOXL_RES_DIR "/textures/default_texture.png", Atlas::COLS, Atlas::ROWS);
 	if (!textureLoaded) {
 		std::cerr << "Failed to load texture atlas" << std::endl;
 		return false;
@@ -89,6 +95,15 @@ bool Renderer::init()
 
     // Enable antialiasing
     glEnable(GL_MULTISAMPLE);
+	glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+
+	// Enable blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_STENCIL_TEST);
+	glStencilMask(0x00);
+
 
 	m_isInitialized = true;
 
@@ -110,12 +125,14 @@ void Renderer::shutdown()
 
 void Renderer::render()
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glStencilMask(0x00);
 
 	// Shader uniforms
 	shader->bind();
 	shader->setUniformMat4f("uView", world->getPlayer()->getView());
 	shader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
+
 
 	// Draw the chunk
 	for (auto& chunkData : world->getChunks())
@@ -123,15 +140,62 @@ void Renderer::render()
 		auto& chunk = chunkData.second;
 		if (chunk)
 		{
-			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getPosition()));
+			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getWorldPosition()));
 			chunk->draw();
 		}
 	}
-	// Draw the single chunk
-	/*if (world->getChunk())
+	// Draw transparent chunks
+	for (auto& chunkData : world->getChunks())
 	{
-		world->getChunk()->draw();
-	}*/
+		auto& chunk = chunkData.second;
+		if (chunk)
+		{
+			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getWorldPosition()));
+
+			chunk->drawTransparent();
+		}
+	}
+
+	// Block highlight
+	if (world->getPlayer()->isBlockFound()) 
+	{
+		glDisable(GL_CULL_FACE);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		// Enable writing to the stencil buffer
+		glStencilMask(0xFF);
+
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+		shader->bind();
+		shader->setUniformMat4f("uModel", glm::scale(glm::translate(glm::mat4(1.0f), world->getPlayer()->getBlockPosition()), glm::vec3(1.01f, 1.01f, 1.01f)));
+		shader->setUniformBool("uColorBlock", true);
+		cubeMesh->draw();
+		shader->setUniformBool("uColorBlock", false);
+
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00);
+		glDepthMask(GL_FALSE);
+		glLineWidth(3);
+
+		highlightShader->bind();
+		highlightShader->setUniformMat4f("uView", world->getPlayer()->getView());
+		highlightShader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
+		highlightShader->setUniformMat4f("uModel", glm::scale(glm::translate(glm::mat4(1.0f), world->getPlayer()->getBlockPosition()), glm::vec3(1.03f, 1.03f, 1.03f)));
+		cubeMesh->draw();
+
+		glDisable(GL_POLYGON_OFFSET_FILL);
+
+		// Re-enable depth writing and stencil writing
+		glDepthMask(GL_TRUE);
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
 
 	// Player wireframe mode
 	if (world->getPlayer()->wireframeMode) {

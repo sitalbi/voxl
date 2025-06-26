@@ -2,12 +2,27 @@
 #include <glad/glad.h>
 #include <iostream>
 
-Mesh::Mesh() : VBO(0), VAO(0), EBO(0)
+Mesh::Mesh() : VBO(0), VAO(0), EBO(0), NBO(0), TBO(0), m_isSetup(false)
 {
 }
 
 Mesh::~Mesh()
 {
+	if (VAO) {
+		glDeleteVertexArrays(1, &VAO);
+	}
+	if (VBO) {
+		glDeleteBuffers(1, &VBO);
+	}
+	if (EBO) {
+		glDeleteBuffers(1, &EBO);
+	}
+	if (NBO) {
+		glDeleteBuffers(1, &NBO);
+	}
+	if (TBO) {
+		glDeleteBuffers(1, &TBO);
+	}
 }
 
 void Mesh::createCube()
@@ -31,12 +46,13 @@ void Mesh::createCube()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube_index_data.size() * sizeof(unsigned int), cube_index_data.data(), GL_STATIC_DRAW);
 
+	indices = cube_index_data;
+
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
         std::cerr << "OpenGL error: " << err << std::endl;
     }
-
-	m_indices = cube_index_data;
+	m_isSetup = err == GL_NO_ERROR;
 
     glBindVertexArray(0);
 }
@@ -50,7 +66,7 @@ void Mesh::setupMesh()
 	// Vertex buffer
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(glm::vec3), m_vertices.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_STATIC_DRAW);
 
 	// Set vertex attribute for position (location 0)
 	glEnableVertexAttribArray(0);
@@ -59,7 +75,7 @@ void Mesh::setupMesh()
 	// Normal buffer
 	glGenBuffers(1, &NBO);
 	glBindBuffer(GL_ARRAY_BUFFER, NBO);
-	glBufferData(GL_ARRAY_BUFFER, m_normals.size() * sizeof(glm::vec3), m_normals.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), normals.data(), GL_STATIC_DRAW);
 
 	// Set vertex attribute for normals (location 1)
 	glEnableVertexAttribArray(1);
@@ -68,7 +84,7 @@ void Mesh::setupMesh()
 	// Texture buffer 
 	glGenBuffers(1, &TBO);
 	glBindBuffer(GL_ARRAY_BUFFER, TBO);
-	glBufferData(GL_ARRAY_BUFFER, m_texCoords.size() * sizeof(glm::vec3), m_texCoords.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(glm::vec3), texCoords.data(), GL_STATIC_DRAW);
 
 	// Set vertex attribute for texture coordinates (location 2)
 	glEnableVertexAttribArray(2);
@@ -77,7 +93,7 @@ void Mesh::setupMesh()
 	// Index buffer
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), m_indices.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 	glBindVertexArray(0);
 
 	GLenum err;
@@ -91,7 +107,7 @@ void Mesh::draw() const
 {
 	if (m_isSetup) {
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 		glBindVertexArray(0);
 	}
 	else {

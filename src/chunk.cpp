@@ -2,6 +2,7 @@
 #include <iostream> 
 #define FNL_IMPL
 #include "FastNoiseLite.h"
+#include "glad/glad.h" 
 #include <GLFW/glfw3.h>
 #include "world.h"
 
@@ -27,10 +28,13 @@ Chunk::Chunk(const Chunk* chunk)
 			}
 		}
 	}
+	m_world = chunk->m_world;
+	m_mesh = std::make_unique<Mesh>(*chunk->m_mesh);
 }
 
 Chunk::~Chunk()
 {
+	memset(m_visited, false, sizeof(m_visited));
 }
 
 void Chunk::setBlockType(int x, int y, int z, BlockType type)
@@ -77,26 +81,45 @@ void Chunk::load()
                     }
                     else if (y == maxHeight - 1) {
                         type = BlockType::Grass;
-                    }
+					}
                     else {
                         type = BlockType::Dirt;
                     }
                 }
                 cubes[x][y][z] = type;
+
+                // Add water blocks if maxHeight is below WATER_HEIGHT
+                if (maxHeight < WATER_HEIGHT) {
+                    for (int y = maxHeight; y < WATER_HEIGHT; y++) {
+                        if (cubes[x][y][z] == BlockType::None) {
+                            cubes[x][y][z] = BlockType::Water;
+                        }
+                    }
+                }
             }
         }
     }
 
+
+	fnl_state treeNoise = fnlCreateState();
+	treeNoise.noise_type = FNL_NOISE_OPENSIMPLEX2S; 
+    treeNoise.frequency = 0.5f;    
+    for (int x = 2; x < CHUNK_SIZE - 2; ++x) {
+        for (int z = 2; z < CHUNK_SIZE - 2; ++z) {
+            float tn = fnlGetNoise2D(&treeNoise, m_x + x, m_z + z);
+            if (tn > 0.8f && cubes[x][getSurfaceY(x, z)][z] == BlockType::Grass) {
+                int baseY = getSurfaceY(x, z) + 1;
+                plantTree(x, baseY, z);
+            }
+        }
+    }
 	
 }
 
 void Chunk::generateMeshData()
 {
-    std::vector<glm::vec3> vertices;
-    std::vector<glm::vec3> normals;
-    std::vector<glm::vec3> textures;
-    std::vector<unsigned int> indices;
-
+    m_mesh = std::make_unique<Mesh>();
+	m_transparentMesh = std::make_unique<Mesh>();
     // All 6 directions
     std::vector<glm::vec3> directions = {
         {-1, 0, 0},  // 0: left   
@@ -109,26 +132,15 @@ void Chunk::generateMeshData()
 
     // Process each direction separately
     for (const glm::vec3& dir : directions) {
-        processDirection(dir, vertices, normals, textures, indices);
+        processDirection(dir);
     }
-
-    m_mesh = std::make_unique<Mesh>();
-    m_mesh->setVertices(vertices);
-    m_mesh->setNormals(normals);
-    m_mesh->setTexCoords(textures);
-    m_mesh->setIndices(indices);
-    m_indexCount = indices.size();
-	m_mesh->m_isSetup = false; // Reset setup state
 }
 
-void Chunk::processDirection(const glm::vec3& dir,
-    std::vector<glm::vec3>& vertices,
-    std::vector<glm::vec3>& normals,
-    std::vector<glm::vec3>& textures,
-    std::vector<unsigned int>& indices)
+void Chunk::processDirection(const glm::vec3& dir)
 {
     memset(m_visited, false, sizeof(m_visited));
-    std::vector<Quad> quads;
+    std::vector<Quad> opaqueQuads;
+    std::vector<Quad> transparentQuads;
 
     for (int x = 0; x < CHUNK_SIZE; ++x) {
         for (int y = 0; y < CHUNK_HEIGHT; ++y) {
@@ -140,20 +152,27 @@ void Chunk::processDirection(const glm::vec3& dir,
                     continue;
                 }
 
-				m_visited[x][y][z] = true; // Mark as visited
-
-                // Find the dimensions to expand based on direction
+                m_visited[x][y][z] = true;
                 auto [width, height] = expandQuad(currentPos, dir, blockType);
 
-                quads.push_back({ glm::vec3(x, y, z), glm::vec2(width, height), dir, blockType });
+				if (blockType == BlockType::Leaves || blockType == BlockType::Water) {
+                    transparentQuads.push_back({ glm::vec3(x, y, z), glm::vec2(width, height), dir, blockType });
+                }
+                else {
+                    opaqueQuads.push_back({ glm::vec3(x, y, z), glm::vec2(width, height), dir, blockType });
+                }
+                
             }
         }
     }
 
     // Generate mesh from quads for this direction
-    for (const auto& quad : quads) {
-        generateQuadGeometry(quad, vertices, normals, textures, indices);
+    for (const auto& quad : opaqueQuads) {
+        generateQuadGeometry(quad, m_mesh->vertices, m_mesh->normals, m_mesh->texCoords, m_mesh->indices);
     }
+	for (const auto& quad : transparentQuads) {
+		generateQuadGeometry(quad, m_transparentMesh->vertices, m_transparentMesh->normals, m_transparentMesh->texCoords, m_transparentMesh->indices);
+	}
 }
 
 std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec3& dir,
@@ -372,6 +391,54 @@ void Chunk::generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& verti
     indices.push_back(startIndex);
 }
 
+int Chunk::getSurfaceY(int x, int z) const
+{
+    for (int y = CHUNK_HEIGHT - 1; y >= 0; --y) {
+        if (cubes[x][y][z] != BlockType::None) return y;
+    }
+    return 0;
+}
+
+void Chunk::plantTree(int x, int y, int z)
+{
+	// Trunk
+	for (int i = 0; i < 3; ++i) {
+		if (y + i < CHUNK_HEIGHT) {
+			cubes[x][y + i][z] = BlockType::Tree;
+		}
+	}
+
+    // Leaves
+    int leafStartY = y + 2;
+    int leafLayers = 2;
+    int baseRadius = 2;  
+
+    for (int i = 0; i < leafLayers; ++i) {
+        int dy = leafStartY + i;
+
+        int radius = baseRadius - i;
+        if (radius < 0) radius = 0;
+
+        for (int dx = -radius; dx <= radius; ++dx) {
+            for (int dz = -radius; dz <= radius; ++dz) {
+                if (dx * dx + dz * dz <= radius * radius) {
+                    int nx = x + dx;
+                    int nz = z + dz;
+                    if (nx >= 0 && nx < CHUNK_SIZE
+                        && nz >= 0 && nz < CHUNK_SIZE
+                        && dy < CHUNK_HEIGHT)
+                    {
+                        if (cubes[nx][dy][nz] != BlockType::Tree) {
+                            cubes[nx][dy][nz] = BlockType::Leaves;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}
+
 
 inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType) const
 {
@@ -387,7 +454,7 @@ inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir,
         nz < 0 || nz >= CHUNK_SIZE)
     {
         // Neighbor is outside this chunk - check adjacent chunk
-        const Chunk* neighbor = nullptr;
+        Chunk* neighbor = nullptr;
         int neighborX = x, neighborY = y, neighborZ = z;
 
         if (nx < 0) {
@@ -423,15 +490,25 @@ inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir,
 
         if (neighbor) {
             BlockType neighborBlockType = neighbor->cubes[neighborX][neighborY][neighborZ];
-            return (neighborBlockType == BlockType::None);
+
+			if (faceType == BlockType::Water) {
+				return neighborBlockType == BlockType::None;
+			}
+
+            return neighborBlockType == BlockType::None || isTransparentBlock(neighborBlockType);
         }
         else {
 			return true;
         }
     }
 
-	// if neighbor is in the chunk, check if it is empty
-    return cubes[nx][ny][nz] == BlockType::None;
+	BlockType neighborBlockType = cubes[nx][ny][nz];
+	if (faceType == BlockType::Water)
+	{
+		return neighborBlockType == BlockType::None;
+	}
+
+	return neighborBlockType == BlockType::None || isTransparentBlock(neighborBlockType);
 }
 
 void Chunk::draw() const
@@ -439,8 +516,14 @@ void Chunk::draw() const
 	if (m_mesh) {
 		m_mesh->draw();
 	}
-	else {
-		std::cerr << "Chunk mesh is not initialized!" << std::endl;
-	}
+}
+
+void Chunk::drawTransparent() const
+{
+    //glDepthMask(GL_FALSE);
+    if (m_transparentMesh) {
+        m_transparentMesh->draw();
+    }
+    glDepthMask(GL_TRUE);
 }
 

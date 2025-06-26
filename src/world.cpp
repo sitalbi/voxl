@@ -3,6 +3,7 @@
 #include <iostream>
 
 
+
 World::World()
 {
 }
@@ -28,8 +29,7 @@ bool World::init()
 
 void World::update(float deltaTime)
 {
-	loadChunks(m_player->getPosition());
-
+	loadChunks(m_player->getWorldPosition());
 
 	generateChunks();
 
@@ -37,7 +37,7 @@ void World::update(float deltaTime)
 
 	// todo: maybe make a render list for chunks to render
 
-	unloadChunks(m_player->getPosition());
+	unloadChunks(m_player->getWorldPosition());
 
 	removeChunks();
 }
@@ -91,13 +91,13 @@ void World::unloadChunks(glm::vec3 playerPosition)
 	// Unload chunks that are too far away from the player
 	int playerChunkX = static_cast<int>(playerPosition.x) / Chunk::CHUNK_SIZE;
 	int playerChunkZ = static_cast<int>(playerPosition.z) / Chunk::CHUNK_SIZE;
-	for (auto chunk : m_chunks)
+	for (const auto& chunk : m_chunks)
 	{
-		int chunkX = chunk.second->getPosition().x / Chunk::CHUNK_SIZE;
-		int chunkZ = chunk.second->getPosition().z / Chunk::CHUNK_SIZE;
+		int chunkX = chunk.second->getWorldPosition().x / Chunk::CHUNK_SIZE;
+		int chunkZ = chunk.second->getWorldPosition().z / Chunk::CHUNK_SIZE;
 		if (abs(chunkX - playerChunkX) > CHUNK_LOAD_RADIUS || abs(chunkZ - playerChunkZ) > CHUNK_LOAD_RADIUS)
 		{
-			m_chunksToRemove.insert(chunk.second);
+			m_chunksToRemove.insert(chunk.first);
 		}
 	}
 }
@@ -130,6 +130,7 @@ void World::setupChunks()
 		Chunk* chunk = *it;
 		if (chunk) {
 			chunk->getMesh()->setupMesh();
+			chunk->getTransparentMesh()->setupMesh();
 			it = m_chunkMeshesToSetup.erase(it); 
 			m_chunksProcessed++;
 		}
@@ -141,24 +142,31 @@ void World::setupChunks()
 
 void World::removeChunks()
 {
-	m_chunksProcessed = 0;
-	auto it = m_chunksToRemove.begin();
-	while (it != m_chunksToRemove.end() && m_chunksProcessed < NUM_CHUNK_PER_FRAME)
+	for (auto const& coord : m_chunksToRemove)
 	{
-		Chunk* chunk = *it;
-		if (chunk) {
-			delete m_chunks[glm::ivec3(chunk->getPosition())];
-			m_chunks.erase(glm::ivec3(chunk->getPosition()));
-			it = m_chunksToRemove.erase(it);
-			m_chunksProcessed++;
-		}
-		else {
-			it++;
-		}
+		// 1) find the map entry
+		auto it = m_chunks.find(coord);
+		if (it == m_chunks.end())
+			continue;
+
+		Chunk* chunk = it->second;
+
+		// 2) cancel any pending work for that chunk
+		m_chunksToGenerate.erase(chunk);
+		m_chunkMeshesToSetup.erase(chunk);
+
+		// 3) remove from the map
+		m_chunks.erase(it);
+
+		// 4) finally delete its memory
+		delete chunk;
 	}
+
+	m_chunksToRemove.clear();
 }
 
-const Chunk* World::getChunk(int x, int y, int z) const
+
+Chunk* World::getChunk(int x, int y, int z) const
 {
 	int chunkX = static_cast<int>(std::floor(x / Chunk::CHUNK_SIZE));
 	int chunkY = static_cast<int>(std::floor(y / Chunk::CHUNK_HEIGHT));
@@ -167,6 +175,28 @@ const Chunk* World::getChunk(int x, int y, int z) const
 
 	glm::ivec3 chunkPos(chunkX, chunkY, chunkZ);
 	auto it = m_chunks.find(chunkPos);
+	if (it != m_chunks.end()) {
+		return it->second;
+	}
+	return nullptr;
+}
+
+Chunk* World::getChunkWorldPos(float x, float y, float z) const
+{
+	// 1) Turn your continuous worldÅ]space position into integer block coords
+	int wx = static_cast<int>(std::floor(x));
+	int wy = static_cast<int>(std::floor(y));
+	int wz = static_cast<int>(std::floor(z));
+
+	// 2) Compute which chunk those block coords live in
+	//    (floor division handles negatives correctly)
+	int chunkX = static_cast<int>(std::floor(wx / float(Chunk::CHUNK_SIZE)));
+	int chunkY = static_cast<int>(std::floor(wy / float(Chunk::CHUNK_HEIGHT)));
+	int chunkZ = static_cast<int>(std::floor(wz / float(Chunk::CHUNK_SIZE)));
+
+	// 3) Look up that chunk in your map
+	glm::ivec3 key(chunkX, chunkY, chunkZ);
+	auto it = m_chunks.find(key);
 	if (it != m_chunks.end()) {
 		return it->second;
 	}
