@@ -59,6 +59,16 @@ BlockType Chunk::getBlockTypeWorldPos(int worldX, int worldY, int worldZ) const
 	return getBlockType(localX, localY, localZ);
 }
 
+BlockType Chunk::getBlockTypeWorldPos(glm::ivec3 worldPos) const
+{
+    // Convert world coordinates to local chunk coordinates
+    int localX = worldPos.x - m_x;
+    int localY = worldPos.y - m_y;
+    int localZ = worldPos.z - m_z;
+
+    return getBlockType(localX, localY, localZ);
+}
+
 void Chunk::load()
 {
     m_indexCount = 0;
@@ -168,10 +178,10 @@ void Chunk::processDirection(const glm::vec3& dir)
 
     // Generate mesh from quads for this direction
     for (const auto& quad : opaqueQuads) {
-        generateQuadGeometry(quad, m_mesh->vertices, m_mesh->normals, m_mesh->texCoords, m_mesh->indices);
+        generateQuadGeometry(quad, m_mesh->vertices, m_mesh->normals, m_mesh->texCoords, m_mesh->ao, m_mesh->indices);
     }
 	for (const auto& quad : transparentQuads) {
-		generateQuadGeometry(quad, m_transparentMesh->vertices, m_transparentMesh->normals, m_transparentMesh->texCoords, m_transparentMesh->indices);
+		generateQuadGeometry(quad, m_transparentMesh->vertices, m_transparentMesh->normals, m_transparentMesh->texCoords, m_transparentMesh->ao, m_transparentMesh->indices);
 	}
 }
 
@@ -267,7 +277,7 @@ int Chunk::getMaxHeight(const glm::ivec3& startPos, const glm::ivec3& heightAxis
 }
 
 void Chunk::generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec3>& textures,
-    std::vector<unsigned int>& indices)
+    std::vector<float>& ao, std::vector<unsigned int>& indices)
 {
     glm::vec3 pos = quad.position;
     float width = quad.size.x;
@@ -275,47 +285,48 @@ void Chunk::generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& verti
     glm::vec3 dir = quad.direction;
 
     // Convert direction to face index
-	int faceIndex = Atlas::faceIndexForDir(dir);
+    int faceIndex = Atlas::faceIndexForDir(dir);
 
     glm::vec3 v1, v2, v3, v4;
     float x = pos.x, y = pos.y, z = pos.z;
 
+	// Vertex positions 
     switch (faceIndex) {
-    case 0: // Left face
-        v1 = glm::vec3(x, y, z + width);
-        v2 = glm::vec3(x, y + height, z + width);
-        v3 = glm::vec3(x, y + height, z);
-        v4 = glm::vec3(x, y, z);
+    case 0: // Left face (-X)
+        v1 = glm::vec3(x, y, z);             // bottom-left
+        v2 = glm::vec3(x, y, z + width);     // bottom-right  
+        v3 = glm::vec3(x, y + height, z + width); // top-right
+        v4 = glm::vec3(x, y + height, z);    // top-left
         break;
-    case 1: // Right face
-        v1 = glm::vec3(x + 1, y, z);
-        v2 = glm::vec3(x + 1, y + height, z);
-        v3 = glm::vec3(x + 1, y + height, z + width);
-        v4 = glm::vec3(x + 1, y, z + width);
+    case 1: // Right face (+X)
+        v1 = glm::vec3(x + 1, y, z + width); // bottom-left
+        v2 = glm::vec3(x + 1, y, z);         // bottom-right
+        v3 = glm::vec3(x + 1, y + height, z); // top-right
+        v4 = glm::vec3(x + 1, y + height, z + width); // top-left
         break;
-    case 2: // Bottom face
-        v1 = glm::vec3(x + width, y, z);
-        v2 = glm::vec3(x + width, y, z + height);
-        v3 = glm::vec3(x, y, z + height);
-        v4 = glm::vec3(x, y, z);
+    case 2: // Bottom face (-Y)
+        v1 = glm::vec3(x, y, z);             // bottom-left
+        v2 = glm::vec3(x + width, y, z);     // bottom-right
+        v3 = glm::vec3(x + width, y, z + height); // top-right
+        v4 = glm::vec3(x, y, z + height);    // top-left
         break;
-    case 3: // Top face
-        v1 = glm::vec3(x, y + 1, z + height);
-        v2 = glm::vec3(x + width, y + 1, z + height);
-        v3 = glm::vec3(x + width, y + 1, z);
-        v4 = glm::vec3(x, y + 1, z);
+    case 3: // Top face (+Y)
+        v1 = glm::vec3(x, y + 1, z + height); // bottom-left
+        v2 = glm::vec3(x + width, y + 1, z + height); // bottom-right
+        v3 = glm::vec3(x + width, y + 1, z); // top-right
+        v4 = glm::vec3(x, y + 1, z);         // top-left
         break;
-    case 4: // Back face
-        v1 = glm::vec3(x + width, y, z);
-        v2 = glm::vec3(x, y, z);
-        v3 = glm::vec3(x, y + height, z);
-        v4 = glm::vec3(x + width, y + height, z);
+    case 4: // Back face (-Z)
+        v1 = glm::vec3(x + width, y, z);     // bottom-left
+        v2 = glm::vec3(x, y, z);             // bottom-right
+        v3 = glm::vec3(x, y + height, z);    // top-right
+        v4 = glm::vec3(x + width, y + height, z); // top-left
         break;
-    case 5: // Front face
-        v1 = glm::vec3(x, y, z + 1);
-        v2 = glm::vec3(x + width, y, z + 1);
-        v3 = glm::vec3(x + width, y + height, z + 1);
-        v4 = glm::vec3(x, y + height, z + 1);
+    case 5: // Front face (+Z)
+        v1 = glm::vec3(x, y, z + 1);         // bottom-left
+        v2 = glm::vec3(x + width, y, z + 1); // bottom-right
+        v3 = glm::vec3(x + width, y + height, z + 1); // top-right
+        v4 = glm::vec3(x, y + height, z + 1); // top-left
         break;
     }
 
@@ -331,64 +342,29 @@ void Chunk::generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& verti
         normals.push_back(dir);
     }
 
-    // Add texture 
+    // Add texture coordinates
     int layer = Atlas::getLayer(quad.type, quad.direction);
-    float w = float(quad.size.x);
-    float h = float(quad.size.y);
 
-    glm::vec3 uv0, uv1, uv2, uv3;
+	// UV mapping
+    glm::vec3 uv1 = glm::vec3(0.0f, 0.0f, layer);        // bottom-left
+    glm::vec3 uv2 = glm::vec3(width, 0.0f, layer);       // bottom-right
+    glm::vec3 uv3 = glm::vec3(width, height, layer);     // top-right
+    glm::vec3 uv4 = glm::vec3(0.0f, height, layer);      // top-left
 
-    switch (faceIndex) {
-    case 0: // Left face
-        uv0 = glm::vec3(w, 0.0f, layer);
-        uv1 = glm::vec3(w, h, layer);
-        uv2 = glm::vec3(0.0f, h, layer);
-        uv3 = glm::vec3(0.0f, 0.0f, layer);
-        break;
-    case 1: // Right face
-        uv0 = glm::vec3(0.0f, 0.0f, layer);
-        uv1 = glm::vec3(0.0f, h, layer);
-        uv2 = glm::vec3(w, h, layer);
-        uv3 = glm::vec3(w, 0.0f, layer);
-        break;
-    case 2: // Bottom face
-        uv0 = glm::vec3(w, 0.0f, layer);
-        uv1 = glm::vec3(w, h, layer);
-        uv2 = glm::vec3(0.0f, h, layer);
-        uv3 = glm::vec3(0.0f, 0.0f, layer);
-        break;
-    case 3: // Top face 
-        uv0 = glm::vec3(0.0f, h, layer);
-        uv1 = glm::vec3(w, h, layer);  
-        uv2 = glm::vec3(w, 0.0f, layer); 
-        uv3 = glm::vec3(0.0f, 0.0f, layer); 
-        break;
-    case 4: // Back face
-        uv0 = glm::vec3(w, 0.0f, layer);  
-        uv1 = glm::vec3(0.0f, 0.0f, layer); 
-        uv2 = glm::vec3(0.0f, h, layer);  
-        uv3 = glm::vec3(w, h, layer);  
-        break;
-    case 5: // Front face 
-        uv0 = glm::vec3(0.0f, 0.0f, layer); 
-        uv1 = glm::vec3(w, 0.0f, layer); 
-        uv2 = glm::vec3(w, h, layer); 
-        uv3 = glm::vec3(0.0f, h, layer);  
-        break;
-    }
-
-    textures.push_back(uv0);
     textures.push_back(uv1);
     textures.push_back(uv2);
     textures.push_back(uv3);
+    textures.push_back(uv4);
 
-
-    indices.push_back(startIndex);
-    indices.push_back(startIndex + 1);
-    indices.push_back(startIndex + 2);
-    indices.push_back(startIndex + 2);
-    indices.push_back(startIndex + 3);
-    indices.push_back(startIndex);
+    // Triangle indices
+    // First triangle: v1, v2, v3 (bottom-left, bottom-right, top-right)
+    // Second triangle: v3, v4, v1 (top-right, top-left, bottom-left)
+    indices.push_back(startIndex);     // v1
+    indices.push_back(startIndex + 1); // v2
+    indices.push_back(startIndex + 2); // v3
+    indices.push_back(startIndex + 2); // v3
+    indices.push_back(startIndex + 3); // v4
+    indices.push_back(startIndex);     // v1
 }
 
 int Chunk::getSurfaceY(int x, int z) const
@@ -525,5 +501,14 @@ void Chunk::drawTransparent() const
         m_transparentMesh->draw();
     }
     glDepthMask(GL_TRUE);
+}
+
+// returns 0..1
+float Chunk::sampleAO(const glm::ivec3& P, const glm::ivec3& side1, const glm::ivec3& side2, const glm::ivec3& corner)
+{
+    int o1 = getBlockTypeWorldPos(P + side1) != BlockType::None;
+    int o2 = getBlockTypeWorldPos(P + side2) != BlockType::None;
+    int o3 = getBlockTypeWorldPos(P + corner) != BlockType::None;
+    return (3 - (o1 + o2 + o3)) / 3.0f;
 }
 

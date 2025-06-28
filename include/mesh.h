@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -87,11 +88,12 @@ public:
 	std::vector<glm::vec3> normals;
 	std::vector<glm::vec4> colors;
     std::vector<glm::vec3> texCoords;
+    std::vector<float> ao;
 
 	std::vector<unsigned int> indices;
 
 private:
-	unsigned int VAO, VBO, EBO, NBO, TBO;
+	unsigned int VAO, VBO, EBO, NBO, TBO, AOBO;
 
 
 };
@@ -102,4 +104,5 @@ struct Quad {
 	glm::vec2 size; // Size of the quad (width, height)
     glm::vec3 direction; // Direction of the quad (0-5 for each face)
 	BlockType type; // Type of block (for texture mapping)
+    std::array<float, 4> ao; // Ambient occlusion values for the 4 corners of the quad
 };;

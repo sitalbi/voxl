@@ -3,6 +3,7 @@
 out vec4 FragColor;
 
 in vec3 vTexCoord;
+in float vAo;
 
 uniform sampler2DArray uTextureArray;
 uniform bool uColorBlock;
@@ -13,10 +14,9 @@ void main()
 
 	if (!uColorBlock) {
 		c = texture(uTextureArray, vTexCoord);
-	}
 
-	//darken the color a bit
-	c.rgb *= 0.8;
+		c.rgb *= vAo;
+	}
 
 	FragColor = c;
 }

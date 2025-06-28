@@ -2,7 +2,7 @@
 #include <glad/glad.h>
 #include <iostream>
 
-Mesh::Mesh() : VBO(0), VAO(0), EBO(0), NBO(0), TBO(0), m_isSetup(false)
+Mesh::Mesh() : VBO(0), VAO(0), EBO(0), NBO(0), TBO(0), AOBO(0), m_isSetup(false)
 {
 }
 
@@ -22,6 +22,9 @@ Mesh::~Mesh()
 	}
 	if (TBO) {
 		glDeleteBuffers(1, &TBO);
+	}
+	if (AOBO) {
+		glDeleteBuffers(1, &AOBO);
 	}
 }
 
@@ -89,6 +92,17 @@ void Mesh::setupMesh()
 	// Set vertex attribute for texture coordinates (location 2)
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+	if (ao.size() == vertices.size()) {
+		// AO buffer
+		glGenBuffers(1, &AOBO);
+		glBindBuffer(GL_ARRAY_BUFFER, AOBO);
+		glBufferData(GL_ARRAY_BUFFER, ao.size() * sizeof(float), ao.data(), GL_STATIC_DRAW);
+
+		// Set vertex attribute for ambient occlusion (location 3)
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 0, 0);
+	}
 
 	// Index buffer
 	glGenBuffers(1, &EBO);

@@ -9,3 +9,4 @@ Voxel game inspired by Minecraft written in C++ using OpenGL 4.5.
 - Add collision
 - Implement SSAO
 - Try to test laoding chunk in player forward direction only
+- Implement day night cycle

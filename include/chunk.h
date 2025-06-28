@@ -50,6 +50,7 @@ public:
 
 	BlockType getBlockType(int x, int y, int z) const;
 	BlockType getBlockTypeWorldPos(int worldX, int worldY, int worldZ) const;
+	BlockType getBlockTypeWorldPos(glm::ivec3 worldPos) const;
 
 	// Load chunk data from noise function
 	void load();
@@ -66,6 +67,7 @@ public:
 
 	void draw() const;
 	void drawTransparent() const;
+
 
 private:
 	int m_x, m_y, m_z;
@@ -89,8 +91,10 @@ private:
 
 	int getMaxHeight(const glm::ivec3& startPos, const glm::ivec3& heightAxis);
 
-	void generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec3>& textures, std::vector<unsigned int>& indices);
+	void generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec3>& textures, std::vector<float>& ao, std::vector<unsigned int>& indices);
 
+	float sampleAO(const glm::ivec3& P, const glm::ivec3& side1, const glm::ivec3& side2, const glm::ivec3& corner);
+	
 	int getSurfaceY(int x, int z) const;
 
 	void plantTree(int x, int y, int z);
