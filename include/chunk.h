@@ -22,6 +22,86 @@ namespace std {
 	};
 }
 
+const float m_aoValues[4] = { 0.1f, 0.25f, 0.5f, 0.8f };
+
+// Neighbor Indices
+const glm::ivec3 m_neighborFaceIndices[4] = {
+	{7, 6, 5},
+	{5, 4, 3},
+	{1, 0, 7},
+	{3, 2, 1},
+};
+
+// Neighbor Positions
+const std::vector<std::vector<glm::ivec3>> m_faceAos = {
+    // Left face (-X)
+    {
+        glm::ivec3(-1, 1, -1),   
+        glm::ivec3(-1, 1, 0),    
+        glm::ivec3(-1, 1, 1),    
+        glm::ivec3(-1, 0, 1),    
+        glm::ivec3(-1, -1, 1),   
+        glm::ivec3(-1, -1, 0),   
+        glm::ivec3(-1, -1, -1),  
+        glm::ivec3(-1, 0, -1),   
+    },
+    // Right face (+X)
+    {
+        glm::ivec3(1, 1, 1),     
+        glm::ivec3(1, 1, 0),     
+        glm::ivec3(1, 1, -1),    
+        glm::ivec3(1, 0, -1),    
+        glm::ivec3(1, -1, -1),   
+        glm::ivec3(1, -1, 0),    
+        glm::ivec3(1, -1, 1),    
+        glm::ivec3(1, 0, 1),     
+    },
+    // Bottom face (-Y)
+    {
+        glm::ivec3(1, -1, -1),   
+        glm::ivec3(0, -1, -1),   
+        glm::ivec3(-1, -1, -1),  
+        glm::ivec3(-1, -1, 0),   
+        glm::ivec3(-1, -1, 1),   
+        glm::ivec3(0, -1, 1),    
+        glm::ivec3(1, -1, 1),    
+        glm::ivec3(1, -1, 0),    
+    },
+    // Top face (+Y)
+    {
+        glm::ivec3(-1, 1, -1),   
+        glm::ivec3(0, 1, -1),    
+        glm::ivec3(1, 1, -1),    
+        glm::ivec3(1, 1, 0),     
+        glm::ivec3(1, 1, 1),     
+        glm::ivec3(0, 1, 1),     
+        glm::ivec3(-1, 1, 1),    
+        glm::ivec3(-1, 1, 0),    
+    },
+    // Back face (-Z)
+    {
+        glm::ivec3(1, 1, -1),    
+        glm::ivec3(0, 1, -1),    
+        glm::ivec3(-1, 1, -1),   
+        glm::ivec3(-1, 0, -1),   
+        glm::ivec3(-1, -1, -1),  
+        glm::ivec3(0, -1, -1),   
+        glm::ivec3(1, -1, -1),   
+        glm::ivec3(1, 0, -1),    
+    },
+    // Front face (+Z)
+    {
+        glm::ivec3(-1, 1, 1),    
+        glm::ivec3(0, 1, 1),     
+        glm::ivec3(1, 1, 1),     
+        glm::ivec3(1, 0, 1),     
+        glm::ivec3(1, -1, 1),    
+        glm::ivec3(0, -1, 1),    
+        glm::ivec3(-1, -1, 1),   
+        glm::ivec3(-1, 0, 1),    
+    }
+};
+
 
 class World;
 
@@ -49,6 +129,7 @@ public:
 	void setBlockType(int x, int y, int z, BlockType type);
 
 	BlockType getBlockType(int x, int y, int z) const;
+	BlockType getBlockType(glm::ivec3 pos) const;
 	BlockType getBlockTypeWorldPos(int worldX, int worldY, int worldZ) const;
 	BlockType getBlockTypeWorldPos(glm::ivec3 worldPos) const;
 
@@ -58,7 +139,6 @@ public:
 	// Generate mesh data for the chunk using greedy meshing
 	void generateMeshData();
 
-
 	inline bool isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType) const;
 
 	inline bool isTransparentBlock(BlockType type) const {
@@ -67,6 +147,8 @@ public:
 
 	void draw() const;
 	void drawTransparent() const;
+
+	std::array<float, 4> getAmbientOcclusion(const glm::ivec3& pos, const glm::vec3& dir) const;
 
 
 private:
@@ -83,7 +165,7 @@ private:
 	void processDirection(const glm::vec3& dir);
 
 	std::pair<int, int> expandQuad(const glm::ivec3& startPos, const glm::vec3& dir,
-		BlockType blockType);
+		BlockType blockType, const glm::ivec3& widthAxis, const glm::ivec3& heightAxis, std::array<float, 4>& ao);
 
 	void getExpansionAxes(const glm::vec3& dir, glm::ivec3& widthAxis, glm::ivec3& heightAxis);
 
@@ -93,8 +175,6 @@ private:
 
 	void generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<glm::vec3>& textures, std::vector<float>& ao, std::vector<unsigned int>& indices);
 
-	float sampleAO(const glm::ivec3& P, const glm::ivec3& side1, const glm::ivec3& side2, const glm::ivec3& corner);
-	
 	int getSurfaceY(int x, int z) const;
 
 	void plantTree(int x, int y, int z);

@@ -101,7 +101,7 @@ void Mesh::setupMesh()
 
 		// Set vertex attribute for ambient occlusion (location 3)
 		glEnableVertexAttribArray(3);
-		glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 0, 0);
+		glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	}
 
 	// Index buffer

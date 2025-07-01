@@ -49,6 +49,14 @@ BlockType Chunk::getBlockType(int x, int y, int z) const
     return cubes[x][y][z];
 }
 
+BlockType Chunk::getBlockType(glm::ivec3 pos) const
+{
+	if (pos.x < 0 || pos.x >= CHUNK_SIZE || pos.y < 0 || pos.y >= CHUNK_HEIGHT || pos.z < 0 || pos.z >= CHUNK_SIZE) {
+		return BlockType::None;
+	}
+	return cubes[pos.x][pos.y][pos.z];
+}
+
 BlockType Chunk::getBlockTypeWorldPos(int worldX, int worldY, int worldZ) const
 {
     // Convert world coordinates to local chunk coordinates
@@ -148,6 +156,10 @@ void Chunk::generateMeshData()
 
 void Chunk::processDirection(const glm::vec3& dir)
 {
+    // Determine which axes to expand based on direction
+    glm::ivec3 widthAxis, heightAxis;
+    getExpansionAxes(dir, widthAxis, heightAxis);
+
     memset(m_visited, false, sizeof(m_visited));
     std::vector<Quad> opaqueQuads;
     std::vector<Quad> transparentQuads;
@@ -156,20 +168,30 @@ void Chunk::processDirection(const glm::vec3& dir)
         for (int y = 0; y < CHUNK_HEIGHT; ++y) {
             for (int z = 0; z < CHUNK_SIZE; ++z) {
                 glm::ivec3 currentPos(x, y, z);
+				glm::ivec3 worldPos = currentPos + glm::ivec3(m_x, m_y, m_z);
                 BlockType blockType = cubes[x][y][z];
 
                 if (m_visited[x][y][z] || !isBlockFaceVisible(x, y, z, dir, blockType)) {
                     continue;
                 }
 
+				std::array<float, 4> ao = getAmbientOcclusion(currentPos, dir);
+
                 m_visited[x][y][z] = true;
-                auto [width, height] = expandQuad(currentPos, dir, blockType);
+                auto [width, height] = expandQuad(currentPos, dir, blockType, widthAxis, heightAxis, ao);
+
+				Quad quad;
+				quad.position = currentPos;
+				quad.size = glm::vec2(width, height);
+				quad.direction = dir;
+				quad.type = blockType;
+                quad.ao = ao;
 
 				if (blockType == BlockType::Leaves || blockType == BlockType::Water) {
-                    transparentQuads.push_back({ glm::vec3(x, y, z), glm::vec2(width, height), dir, blockType });
+                    transparentQuads.push_back(quad);
                 }
                 else {
-                    opaqueQuads.push_back({ glm::vec3(x, y, z), glm::vec2(width, height), dir, blockType });
+                    opaqueQuads.push_back(quad);
                 }
                 
             }
@@ -186,22 +208,21 @@ void Chunk::processDirection(const glm::vec3& dir)
 }
 
 std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec3& dir,
-    BlockType blockType)
+	BlockType blockType, const glm::ivec3& widthAxis, const glm::ivec3& heightAxis, std::array<float, 4>& ao)
 {
     int width = 1, height = 1;
-
-    // Determine which axes to expand based on direction
-    glm::ivec3 widthAxis, heightAxis;
-    getExpansionAxes(dir, widthAxis, heightAxis);
 
     // Expand width first
     while (true) {
         glm::ivec3 nextPos = startPos + widthAxis * width;
 
+		std::array<float, 4> nextAo = getAmbientOcclusion(nextPos, dir);
+
         if (!isValidPosition(nextPos) ||
             m_visited[nextPos.x][nextPos.y][nextPos.z] ||
             cubes[nextPos.x][nextPos.y][nextPos.z] != blockType ||
-            !isBlockFaceVisible(nextPos.x, nextPos.y, nextPos.z, dir, blockType)) {
+            !isBlockFaceVisible(nextPos.x, nextPos.y, nextPos.z, dir, blockType) ||
+            ao!=nextAo) {
             break;
         }
 
@@ -217,10 +238,13 @@ std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec
         for (int w = 0; w < width; w++) {
             glm::ivec3 checkPos = startPos + widthAxis * w + heightAxis * h;
 
+			std::array<float, 4> checkAo = getAmbientOcclusion(checkPos, dir);
+
             if (!isValidPosition(checkPos) ||
                 m_visited[checkPos.x][checkPos.y][checkPos.z] ||
                 cubes[checkPos.x][checkPos.y][checkPos.z] != blockType ||
-                !isBlockFaceVisible(checkPos.x, checkPos.y, checkPos.z, dir, blockType)) {
+                !isBlockFaceVisible(checkPos.x, checkPos.y, checkPos.z, dir, blockType) ||
+                checkAo != ao) {
                 rowGood = false;
                 break;
             }
@@ -295,38 +319,38 @@ void Chunk::generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& verti
     case 0: // Left face (-X)
         v1 = glm::vec3(x, y, z);             // bottom-left
         v2 = glm::vec3(x, y, z + width);     // bottom-right  
-        v3 = glm::vec3(x, y + height, z + width); // top-right
-        v4 = glm::vec3(x, y + height, z);    // top-left
+        v3 = glm::vec3(x, y + height, z);    // top-left
+        v4 = glm::vec3(x, y + height, z + width); // top-right
         break;
     case 1: // Right face (+X)
         v1 = glm::vec3(x + 1, y, z + width); // bottom-left
         v2 = glm::vec3(x + 1, y, z);         // bottom-right
-        v3 = glm::vec3(x + 1, y + height, z); // top-right
-        v4 = glm::vec3(x + 1, y + height, z + width); // top-left
+        v3 = glm::vec3(x + 1, y + height, z + width); // top-left
+        v4 = glm::vec3(x + 1, y + height, z); // top-right
         break;
     case 2: // Bottom face (-Y)
         v1 = glm::vec3(x, y, z);             // bottom-left
         v2 = glm::vec3(x + width, y, z);     // bottom-right
-        v3 = glm::vec3(x + width, y, z + height); // top-right
-        v4 = glm::vec3(x, y, z + height);    // top-left
+        v3 = glm::vec3(x, y, z + height);    // top-left
+        v4 = glm::vec3(x + width, y, z + height); // top-right
         break;
     case 3: // Top face (+Y)
         v1 = glm::vec3(x, y + 1, z + height); // bottom-left
         v2 = glm::vec3(x + width, y + 1, z + height); // bottom-right
-        v3 = glm::vec3(x + width, y + 1, z); // top-right
-        v4 = glm::vec3(x, y + 1, z);         // top-left
+        v3 = glm::vec3(x, y + 1, z);         // top-left
+        v4 = glm::vec3(x + width, y + 1, z); // top-right
         break;
     case 4: // Back face (-Z)
         v1 = glm::vec3(x + width, y, z);     // bottom-left
         v2 = glm::vec3(x, y, z);             // bottom-right
-        v3 = glm::vec3(x, y + height, z);    // top-right
-        v4 = glm::vec3(x + width, y + height, z); // top-left
+        v3 = glm::vec3(x + width, y + height, z); // top-left
+        v4 = glm::vec3(x, y + height, z);    // top-right
         break;
     case 5: // Front face (+Z)
         v1 = glm::vec3(x, y, z + 1);         // bottom-left
         v2 = glm::vec3(x + width, y, z + 1); // bottom-right
-        v3 = glm::vec3(x + width, y + height, z + 1); // top-right
-        v4 = glm::vec3(x, y + height, z + 1); // top-left
+        v3 = glm::vec3(x, y + height, z + 1); // top-left
+        v4 = glm::vec3(x + width, y + height, z + 1); // top-right
         break;
     }
 
@@ -348,23 +372,45 @@ void Chunk::generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& verti
 	// UV mapping
     glm::vec3 uv1 = glm::vec3(0.0f, 0.0f, layer);        // bottom-left
     glm::vec3 uv2 = glm::vec3(width, 0.0f, layer);       // bottom-right
-    glm::vec3 uv3 = glm::vec3(width, height, layer);     // top-right
-    glm::vec3 uv4 = glm::vec3(0.0f, height, layer);      // top-left
+    glm::vec3 uv3 = glm::vec3(0.0f, height, layer);      // top-left
+    glm::vec3 uv4 = glm::vec3(width, height, layer);     // top-right
 
     textures.push_back(uv1);
     textures.push_back(uv2);
     textures.push_back(uv3);
     textures.push_back(uv4);
 
-    // Triangle indices
-    // First triangle: v1, v2, v3 (bottom-left, bottom-right, top-right)
-    // Second triangle: v3, v4, v1 (top-right, top-left, bottom-left)
-    indices.push_back(startIndex);     // v1
-    indices.push_back(startIndex + 1); // v2
-    indices.push_back(startIndex + 2); // v3
-    indices.push_back(startIndex + 2); // v3
-    indices.push_back(startIndex + 3); // v4
-    indices.push_back(startIndex);     // v1
+
+	// Add ambient occlusion values
+	ao.push_back(quad.ao[0]);
+	ao.push_back(quad.ao[1]);
+	ao.push_back(quad.ao[2]);
+	ao.push_back(quad.ao[3]);
+
+    // Update diagonal calculation to use remapped values
+    float diagA = quad.ao[0] + quad.ao[3];
+    float diagB = quad.ao[1] + quad.ao[2];
+    bool flip = diagA > diagB;
+
+    // now emit either the normal or flipped triangle indices:
+    if (!flip) 
+    {
+        indices.push_back(startIndex);     // v1
+        indices.push_back(startIndex + 1); // v2
+        indices.push_back(startIndex + 2); // v3
+        indices.push_back(startIndex + 2); // v3
+        indices.push_back(startIndex + 1); // v2
+        indices.push_back(startIndex + 3); // v4
+    }
+    else 
+    {
+        indices.push_back(startIndex);     // v1
+        indices.push_back(startIndex + 1); // v2
+        indices.push_back(startIndex + 3); // v4
+        indices.push_back(startIndex);     // v1
+        indices.push_back(startIndex + 3); // v4
+        indices.push_back(startIndex + 2); // v3
+    }
 }
 
 int Chunk::getSurfaceY(int x, int z) const
@@ -496,19 +542,32 @@ void Chunk::draw() const
 
 void Chunk::drawTransparent() const
 {
-    //glDepthMask(GL_FALSE);
     if (m_transparentMesh) {
         m_transparentMesh->draw();
     }
     glDepthMask(GL_TRUE);
 }
 
-// returns 0..1
-float Chunk::sampleAO(const glm::ivec3& P, const glm::ivec3& side1, const glm::ivec3& side2, const glm::ivec3& corner)
-{
-    int o1 = getBlockTypeWorldPos(P + side1) != BlockType::None;
-    int o2 = getBlockTypeWorldPos(P + side2) != BlockType::None;
-    int o3 = getBlockTypeWorldPos(P + corner) != BlockType::None;
-    return (3 - (o1 + o2 + o3)) / 3.0f;
-}
+std::array<float, 4> Chunk::getAmbientOcclusion(const glm::ivec3& pos, const glm::vec3& dir) const {
+    int face = Atlas::faceIndexForDir(dir);
+    std::array<float, 4> outAo;
 
+    for (int v = 0; v < 4; ++v) {
+        // which of the eight neighbours to test:
+		glm::ivec3 aoIndices = m_neighborFaceIndices[v];
+
+		// todo: check if the block is in a neighbor chunk
+
+        // 1 if solid, 0 if empty
+        int s1 = getBlockType(pos+m_faceAos[face][aoIndices.x]) != BlockType::None;
+        int s2 = getBlockType(pos+m_faceAos[face][aoIndices.z]) != BlockType::None;
+        int c = getBlockType(pos+ m_faceAos[face][aoIndices.y]) != BlockType::None;
+
+        int state = (s1 + s2 == 2)
+            ? 0
+            : 3 - (s1 + s2 + c);
+
+        outAo[v] = m_aoValues[state];
+    }
+    return outAo;
+}

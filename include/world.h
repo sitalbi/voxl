@@ -15,7 +15,7 @@
 class World : public ISubsystem
 {
 static const int NUM_CHUNK_PER_FRAME = 1;
-static const int CHUNK_LOAD_RADIUS = 8;
+static const int CHUNK_LOAD_RADIUS = 1;
 
 public:
 	World();
