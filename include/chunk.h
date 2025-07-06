@@ -139,7 +139,7 @@ public:
 	// Generate mesh data for the chunk using greedy meshing
 	void generateMeshData();
 
-	inline bool isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType) const;
+	inline bool isBlockFaceVisible(int x, int y, int z, const glm::ivec3& dir, BlockType faceType) const;
 
 	inline bool isTransparentBlock(BlockType type) const {
 		return type == BlockType::Water || type == BlockType::Leaves;
@@ -148,7 +148,7 @@ public:
 	void draw() const;
 	void drawTransparent() const;
 
-	std::array<float, 4> getAmbientOcclusion(const glm::ivec3& pos, const glm::vec3& dir) const;
+	std::array<float, 4> getAmbientOcclusion(const glm::ivec3& pos, const glm::ivec3& dir) const;
 
 
 private:
@@ -157,12 +157,14 @@ private:
 
 	bool m_visited[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
 
+    std::array<float, 4> nextAo;
+
 	World* m_world;
 
 	std::unique_ptr<Mesh> m_mesh;
 	std::unique_ptr<Mesh> m_transparentMesh;
 
-	void processDirection(const glm::vec3& dir);
+	void processDirection(const glm::ivec3& dir);
 
 	std::pair<int, int> expandQuad(const glm::ivec3& startPos, const glm::vec3& dir,
 		BlockType blockType, const glm::ivec3& widthAxis, const glm::ivec3& heightAxis, std::array<float, 4>& ao);
@@ -178,4 +180,6 @@ private:
 	int getSurfaceY(int x, int z) const;
 
 	void plantTree(int x, int y, int z);
+
+    BlockType getNeighborType(const glm::ivec3& pos, const glm::ivec3& dir) const;
 };

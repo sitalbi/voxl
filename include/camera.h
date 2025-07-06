@@ -14,7 +14,7 @@ public:
 
 	glm::mat4 getProjectionMatrix() const 
 	{
-		return glm::perspective(glm::radians(45.0f), static_cast<float>(m_width) / static_cast<float>(m_height), m_nearClippingPlane, m_farClippingPlane);
+		return glm::perspective(glm::radians(m_fov), static_cast<float>(m_width) / static_cast<float>(m_height), m_nearClippingPlane, m_farClippingPlane);
 	}
 
 	glm::vec3 getWorldPosition() const { return m_position; }
@@ -38,6 +38,8 @@ private:
 	glm::vec3 m_up;
 	glm::vec3 m_right;
 	glm::vec3 m_worldUp;
+
+	float m_fov = 55.0f;
 
 	float m_yaw;
 	float m_pitch;

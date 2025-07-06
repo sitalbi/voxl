@@ -61,19 +61,20 @@ private:
 
     bool isSprinting = false;
     bool m_blockFound = false;
-    bool m_isGrounded = true;
+    bool m_isGrounded = false;
 
     bool m_isFlying = true;
 
     float m_speed;
-    float m_defaultSpeed = 15.0f;
+    float m_defaultSpeed = 5.0f;
     float m_speedMultiplier = 1.0f;
     float m_defaultSpeedMultiplier = 1.0f;
-    float m_gravity = -15.0f;
+    float m_gravity = -20.0f;
     float m_verticalVelocity = 0.0f;
+	float m_jumpVelocity = 6.5f;
 
-    float m_height = 1.5f;
-    float m_width = 0.25f;
+    float m_height = 1.75f;
+    float m_width = 0.35f;
 
     std::unordered_set<BlockType> m_nonSelectableBlockTypes = { 
         BlockType::Water, 
@@ -85,7 +86,11 @@ private:
 
     void updateCamera();
 
+    void updateGrounded();
+
     void handleCollisions(float dx, float dy, float dz);
+
+    void handleVerticalCollisions();
 
     void onPressedKey(int key, const std::function<void()>& callback);
 

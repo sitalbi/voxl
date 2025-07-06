@@ -97,9 +97,6 @@ bool Renderer::init()
     glEnable(GL_MULTISAMPLE);
 	glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 
-	// Enable blending
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 	glEnable(GL_STENCIL_TEST);
 	glStencilMask(0x00);
@@ -144,6 +141,10 @@ void Renderer::render()
 			chunk->draw();
 		}
 	}
+
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	// Draw transparent chunks
 	for (auto& chunkData : world->getChunks())
 	{
@@ -155,6 +156,7 @@ void Renderer::render()
 			chunk->drawTransparent();
 		}
 	}
+	glDisable(GL_BLEND);
 
 	// Block highlight
 	if (world->getPlayer()->isBlockFound()) 
@@ -183,7 +185,7 @@ void Renderer::render()
 		highlightShader->bind();
 		highlightShader->setUniformMat4f("uView", world->getPlayer()->getView());
 		highlightShader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
-		highlightShader->setUniformMat4f("uModel", glm::scale(glm::translate(glm::mat4(1.0f), world->getPlayer()->getBlockPosition()), glm::vec3(1.03f, 1.03f, 1.03f)));
+		highlightShader->setUniformMat4f("uModel", glm::scale(glm::translate(glm::mat4(1.0f), world->getPlayer()->getBlockPosition()), glm::vec3(1.05f, 1.05f, 1.05f)));
 		cubeMesh->draw();
 
 		glDisable(GL_POLYGON_OFFSET_FILL);

@@ -15,7 +15,7 @@
 class World : public ISubsystem
 {
 static const int NUM_CHUNK_PER_FRAME = 1;
-static const int CHUNK_LOAD_RADIUS = 1;
+static const int CHUNK_LOAD_RADIUS = 3;
 
 public:
 	World();
@@ -61,6 +61,10 @@ public:
 
 	Chunk* getChunk(int x, int y, int z) const;
 	Chunk* getChunkWorldPos(float x, float y, float z) const;
+
+	BlockType getBlockTypeWorld(const glm::ivec3& worldPos) const;
+
+	bool isSolidBlock(int x, int y, int z) const;
 
 	std::unordered_map<glm::ivec3, Chunk*>& getChunks() { return m_chunks; }
 	Player* getPlayer() const { return m_player; }

@@ -18,5 +18,11 @@ void main()
 		c.rgb *= vAo;
 	}
 
+	// Apply alpha test with a=0.5, 
+	// taking into account the smaller mip levels averaged pixels alpha values
+	if(c.a < 0.5) {
+		discard;
+	}
+
 	FragColor = c;
 }

@@ -7,6 +7,6 @@ Voxel game inspired by Minecraft written in C++ using OpenGL 4.5.
 - Use a namespace (voxl)
 - Implement block selection and add/remove blocks
 - Add collision
-- Implement SSAO
-- Try to test laoding chunk in player forward direction only
+- Try to test loading chunk in player forward direction only (using frustum ?)
 - Implement day night cycle
+- Multithreading for chunk generation

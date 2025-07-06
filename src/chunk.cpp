@@ -139,7 +139,7 @@ void Chunk::generateMeshData()
     m_mesh = std::make_unique<Mesh>();
 	m_transparentMesh = std::make_unique<Mesh>();
     // All 6 directions
-    std::vector<glm::vec3> directions = {
+    std::vector<glm::ivec3> directions = {
         {-1, 0, 0},  // 0: left   
         { 1, 0, 0},  // 1: right  
         { 0,-1, 0},  // 2: bottom 
@@ -149,12 +149,12 @@ void Chunk::generateMeshData()
     };
 
     // Process each direction separately
-    for (const glm::vec3& dir : directions) {
+    for (const glm::ivec3& dir : directions) {
         processDirection(dir);
     }
 }
 
-void Chunk::processDirection(const glm::vec3& dir)
+void Chunk::processDirection(const glm::ivec3& dir)
 {
     // Determine which axes to expand based on direction
     glm::ivec3 widthAxis, heightAxis;
@@ -187,7 +187,7 @@ void Chunk::processDirection(const glm::vec3& dir)
 				quad.type = blockType;
                 quad.ao = ao;
 
-				if (blockType == BlockType::Leaves || blockType == BlockType::Water) {
+				if (blockType == BlockType::Water) {
                     transparentQuads.push_back(quad);
                 }
                 else {
@@ -216,7 +216,7 @@ std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec
     while (true) {
         glm::ivec3 nextPos = startPos + widthAxis * width;
 
-		std::array<float, 4> nextAo = getAmbientOcclusion(nextPos, dir);
+		nextAo = getAmbientOcclusion(nextPos, dir);
 
         if (!isValidPosition(nextPos) ||
             m_visited[nextPos.x][nextPos.y][nextPos.z] ||
@@ -238,13 +238,13 @@ std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec
         for (int w = 0; w < width; w++) {
             glm::ivec3 checkPos = startPos + widthAxis * w + heightAxis * h;
 
-			std::array<float, 4> checkAo = getAmbientOcclusion(checkPos, dir);
+			nextAo = getAmbientOcclusion(checkPos, dir);
 
             if (!isValidPosition(checkPos) ||
                 m_visited[checkPos.x][checkPos.y][checkPos.z] ||
                 cubes[checkPos.x][checkPos.y][checkPos.z] != blockType ||
                 !isBlockFaceVisible(checkPos.x, checkPos.y, checkPos.z, dir, blockType) ||
-                checkAo != ao) {
+                nextAo != ao) {
                 rowGood = false;
                 break;
             }
@@ -461,14 +461,12 @@ void Chunk::plantTree(int x, int y, int z)
 
 }
 
-
-inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir, BlockType faceType) const
+BlockType Chunk::getNeighborType(const glm::ivec3& pos, const glm::ivec3& dir) const
 {
-    if (faceType == BlockType::None) return false;
-
-    int nx = x + static_cast<int>(dir.x);
-    int ny = y + static_cast<int>(dir.y);
-    int nz = z + static_cast<int>(dir.z);
+    BlockType type = BlockType::None;
+    int nx = pos.x + dir.x;
+    int ny = pos.y + dir.y;
+    int nz = pos.z + dir.z;
 
     // if neighbor is out of chunk
     if (nx < 0 || nx >= CHUNK_SIZE ||
@@ -477,54 +475,56 @@ inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::vec3& dir,
     {
         // Neighbor is outside this chunk - check adjacent chunk
         Chunk* neighbor = nullptr;
-        int neighborX = x, neighborY = y, neighborZ = z;
+        glm::ivec3 neighborPos = glm::ivec3(nx, ny, nz);
+        glm::ivec3 neighborDelta = glm::ivec3(0, 0, 0);
 
         if (nx < 0) {
-            // Left boundary
-            neighbor = m_world->getChunk(m_x - CHUNK_SIZE, m_y, m_z);
-            neighborX = CHUNK_SIZE - 1;
+            neighborDelta.x = -CHUNK_SIZE;
+            neighborPos.x = nx + CHUNK_SIZE; // This will be CHUNK_SIZE-1 when nx=-1
         }
         else if (nx >= CHUNK_SIZE) {
-            // Right boundary
-            neighbor = m_world->getChunk(m_x + CHUNK_SIZE, m_y, m_z);
-            neighborX = 0;
+            neighborDelta.x = CHUNK_SIZE;
+            neighborPos.x = nx - CHUNK_SIZE; // This will be 0 when nx=CHUNK_SIZE
         }
-        else if (ny < 0) {
-            // Bottom boundary
-            neighbor = m_world->getChunk(m_x, m_y - CHUNK_HEIGHT, m_z);
-            neighborY = CHUNK_HEIGHT - 1;
+
+        if (ny < 0) {
+            neighborDelta.y = -CHUNK_HEIGHT;
+            neighborPos.y = ny + CHUNK_HEIGHT;
         }
         else if (ny >= CHUNK_HEIGHT) {
-            // Top boundary
-            neighbor = m_world->getChunk(m_x, m_y + CHUNK_HEIGHT, m_z);
-            neighborY = 0;
+            neighborDelta.y = CHUNK_HEIGHT;
+            neighborPos.y = ny - CHUNK_HEIGHT;
         }
-        else if (nz < 0) {
-            // Back boundary
-            neighbor = m_world->getChunk(m_x, m_y, m_z - CHUNK_SIZE);
-            neighborZ = CHUNK_SIZE - 1;
+
+        if (nz < 0) {
+            neighborDelta.z = -CHUNK_SIZE;
+            neighborPos.z = nz + CHUNK_SIZE;
         }
         else if (nz >= CHUNK_SIZE) {
-            // Front boundary
-            neighbor = m_world->getChunk(m_x, m_y, m_z + CHUNK_SIZE);
-            neighborZ = 0;
+            neighborDelta.z = CHUNK_SIZE;
+            neighborPos.z = nz - CHUNK_SIZE;
         }
 
+        neighbor = m_world->getChunk(m_x + neighborDelta.x, m_y + neighborDelta.y, m_z + neighborDelta.z);
         if (neighbor) {
-            BlockType neighborBlockType = neighbor->cubes[neighborX][neighborY][neighborZ];
-
-			if (faceType == BlockType::Water) {
-				return neighborBlockType == BlockType::None;
-			}
-
-            return neighborBlockType == BlockType::None || isTransparentBlock(neighborBlockType);
+            type = neighbor->cubes[neighborPos.x][neighborPos.y][neighborPos.z];
         }
         else {
-			return true;
+            type = BlockType::None;
         }
     }
+    else {
+        // Neighbor is within this chunk
+        type = cubes[nx][ny][nz];
+    }
+    return type;
+}
 
-	BlockType neighborBlockType = cubes[nx][ny][nz];
+inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::ivec3& dir, BlockType faceType) const
+{
+    if (faceType == BlockType::None) return false;
+
+	BlockType neighborBlockType = getNeighborType(glm::ivec3(x, y, z), dir);
 	if (faceType == BlockType::Water)
 	{
 		return neighborBlockType == BlockType::None;
@@ -545,10 +545,9 @@ void Chunk::drawTransparent() const
     if (m_transparentMesh) {
         m_transparentMesh->draw();
     }
-    glDepthMask(GL_TRUE);
 }
 
-std::array<float, 4> Chunk::getAmbientOcclusion(const glm::ivec3& pos, const glm::vec3& dir) const {
+std::array<float, 4> Chunk::getAmbientOcclusion(const glm::ivec3& pos, const glm::ivec3& dir) const {
     int face = Atlas::faceIndexForDir(dir);
     std::array<float, 4> outAo;
 
@@ -556,12 +555,9 @@ std::array<float, 4> Chunk::getAmbientOcclusion(const glm::ivec3& pos, const glm
         // which of the eight neighbours to test:
 		glm::ivec3 aoIndices = m_neighborFaceIndices[v];
 
-		// todo: check if the block is in a neighbor chunk
-
-        // 1 if solid, 0 if empty
-        int s1 = getBlockType(pos+m_faceAos[face][aoIndices.x]) != BlockType::None;
-        int s2 = getBlockType(pos+m_faceAos[face][aoIndices.z]) != BlockType::None;
-        int c = getBlockType(pos+ m_faceAos[face][aoIndices.y]) != BlockType::None;
+        int s1 = getNeighborType(pos, m_faceAos[face][aoIndices.x]) != BlockType::None;
+        int s2 = getNeighborType(pos, m_faceAos[face][aoIndices.z]) != BlockType::None;
+        int c = getNeighborType(pos, m_faceAos[face][aoIndices.y]) != BlockType::None;
 
         int state = (s1 + s2 == 2)
             ? 0

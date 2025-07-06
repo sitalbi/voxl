@@ -57,10 +57,13 @@ void Player::update(float deltaTime)
 
 	m_position.x += m_velocity.x * deltaTime;
 	if (!m_isFlying) handleCollisions(m_velocity.x, 0.0f, 0.0f);
-	m_position.y += m_velocity.y * deltaTime;
-	if (!m_isFlying) handleCollisions(0.0f, m_velocity.y, 0.0f);
 	m_position.z += m_velocity.z * deltaTime;
 	if (!m_isFlying) handleCollisions(0.0f, 0.0f, m_velocity.z);
+
+	if (!m_isFlying) updateGrounded();
+
+	m_position.y += m_velocity.y * deltaTime;
+	if (!m_isFlying) handleVerticalCollisions();
 
 	// Update camera position
 	updateCamera();
@@ -96,7 +99,7 @@ void Player::processInput(GLFWwindow* window, float deltaTime)
     }
     else {
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && m_isGrounded) {
-            m_verticalVelocity = 6.5f;
+            m_verticalVelocity = m_jumpVelocity;
             m_isGrounded = false;
         }
     }
@@ -157,10 +160,120 @@ void Player::updateCamera()
     m_camera->setPosition(m_cameraPosition);
 }
 
+void Player::updateGrounded()
+{
+    int x1 = int(std::floor(m_position.x - m_width));
+    int x2 = int(std::floor(m_position.x + m_width));
+
+    int y0 = int(std::floor(m_position.y - 0.05f));
+    int z1 = int(std::floor(m_position.z - m_width));
+    int z2 = int(std::floor(m_position.z + m_width));
+
+    bool onFloor =
+        m_world->isSolidBlock(x1, y0, z1) ||
+        m_world->isSolidBlock(x2, y0, z1) ||
+        m_world->isSolidBlock(x1, y0, z2) ||
+        m_world->isSolidBlock(x2, y0, z2);
+
+    m_isGrounded = onFloor;
+}
+
 void Player::handleCollisions(float dx, float dy, float dz)
 {
-    //TODO
+    // normalize the direction
+	glm::vec3 direction = glm::normalize(glm::vec3(dx, dy, dz));
+
+    int x1 = int(floor(m_position.x - m_width));
+    int x2 = int(floor(m_position.x + m_width));
+    int z1 = int(floor(m_position.z - m_width));
+    int z2 = int(floor(m_position.z + m_width));
+    int x3 = glm::floor(m_position.x - direction.x - m_width);
+    int y3 = glm::floor(m_position.y - direction.y);
+    int z3 = glm::floor(m_position.z - direction.z - m_width);
+    int x4 = glm::floor(m_position.x - direction.x + m_width);
+    int y4 = glm::floor(m_position.y - direction.y + m_height);
+    int z4 = glm::floor(m_position.z - direction.z + m_width);
+    int y5 = glm::round(y3 + (y4 - y3) / 2); 
+
+    // right
+    if (m_world->isSolidBlock(x1, y3, z3) || m_world->isSolidBlock(x1, y3, z4) ||
+        m_world->isSolidBlock(x1, y4, z3) || m_world->isSolidBlock(x1, y4, z4) ||
+        m_world->isSolidBlock(x1, y5, z3) || m_world->isSolidBlock(x1, y5, z4)) {
+
+        if (direction.x < 0) {
+            m_position.x = x3 + m_width;
+            m_velocity.x = 0.0f;
+        }
+    }
+
+    // left
+    if (m_world->isSolidBlock(x2, y3, z3) || m_world->isSolidBlock(x2, y3, z4) ||
+        m_world->isSolidBlock(x2, y4, z3) || m_world->isSolidBlock(x2, y4, z4) ||
+        m_world->isSolidBlock(x2, y5, z3) || m_world->isSolidBlock(x2, y5, z4)) {
+
+        if (direction.x > 0) {
+            m_position.x = (x4 + 1) - m_width - 0.01f;
+            m_velocity.x = 0.0f;
+        }
+    }
+
+    // forward
+    if (m_world->isSolidBlock(x3, y3, z1) || m_world->isSolidBlock(x4, y3, z1) ||
+        m_world->isSolidBlock(x4, y4, z1) || m_world->isSolidBlock(x3, y4, z1) ||
+        m_world->isSolidBlock(x3, y5, z1) || m_world->isSolidBlock(x4, y5, z1)) {
+
+        if (direction.z < 0) {
+            m_position.z = z3 + m_width;
+            m_velocity.z = 0.0f;
+        }
+    }
+
+    // backward
+    if (m_world->isSolidBlock(x3, y3, z2) || m_world->isSolidBlock(x4, y3, z2) ||
+        m_world->isSolidBlock(x4, y4, z2) || m_world->isSolidBlock(x3, y4, z2) ||
+        m_world->isSolidBlock(x3, y5, z2) || m_world->isSolidBlock(x4, y5, z2)) {
+
+        if (direction.z > 0) {
+            m_position.z = (z4 + 1) - m_width - 0.01f;
+            m_velocity.z = 0.0f;
+        }
+    }
 }
+
+void Player::handleVerticalCollisions() {
+    int x1 = int(floor(m_position.x - m_width));
+    int x2 = int(floor(m_position.x + m_width));
+    int y1 = int(floor(m_position.y));
+    int y2 = int(floor(m_position.y + m_height));
+    int z1 = int(floor(m_position.z - m_width));
+    int z2 = int(floor(m_position.z + m_width));
+
+    if (m_velocity.y < 0.0f) {
+        bool hitFloor =
+            m_world->isSolidBlock(x1, y1, z1) ||
+            m_world->isSolidBlock(x2, y1, z1) ||
+            m_world->isSolidBlock(x2, y1, z2) ||
+            m_world->isSolidBlock(x1, y1, z2);
+
+        if (hitFloor) {
+            m_position.y = y1 + 1.0f;
+            m_velocity.y = 0.0f;
+        }
+    }
+    else if (m_velocity.y > 0.0f) {
+        bool hitCeiling =
+            m_world->isSolidBlock(x1, y2, z1) ||
+            m_world->isSolidBlock(x2, y2, z1) ||
+            m_world->isSolidBlock(x2, y2, z2) ||
+            m_world->isSolidBlock(x1, y2, z2);
+
+        if (hitCeiling) {
+            m_position.y = y2 - m_height - 0.01f;
+            m_velocity.y = 0.0f;
+        }
+    }
+}
+
 
 void Player::onPressedKey(int key, const std::function<void()>& callback)
 {
@@ -183,22 +296,18 @@ bool Player::rayCast(float maxDistance, glm::vec3& outBlockPosition, glm::vec3& 
     for (float distance = 0.0f; distance < maxDistance; distance += step) {
         currentPos = rayOrigin + rayDirection * distance;
 
-        // Check if the chunk exists
         Chunk* chunk = m_world->getChunkWorldPos(currentPos.x, currentPos.y, currentPos.z);
         if (chunk == nullptr) {
             return false;
         }
 
-        // Get the local block position within the chunk
         int blockX = glm::mod(glm::floor(currentPos.x), static_cast<float>(Chunk::CHUNK_SIZE));
         int blockY = glm::mod(glm::floor(currentPos.y), static_cast<float>(Chunk::CHUNK_HEIGHT));
         int blockZ = glm::mod(glm::floor(currentPos.z), static_cast<float>(Chunk::CHUNK_SIZE));
 
         glm::ivec3 blockPos = glm::ivec3(blockX, blockY, blockZ);
 
-        // Check if there is a block at this position
         if (m_nonSelectableBlockTypes.find(chunk->cubes[blockPos.x][blockPos.y][blockPos.z]) == m_nonSelectableBlockTypes.end()) {
-            // Determine which face is hit based on ray direction
             glm::vec3 blockCenter = chunk->getWorldPosition() + glm::vec3(blockPos) + glm::vec3(0.5f);
             glm::vec3 delta = currentPos - blockCenter;
 
