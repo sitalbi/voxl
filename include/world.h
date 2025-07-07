@@ -31,6 +31,7 @@ public:
 	void generateChunks();
 	void setupChunks();
 	void removeChunks();
+	void updateChunk(Chunk* chunk);
 
 	void setPlayer(Player* player) {
 		m_player = player;

@@ -164,6 +164,29 @@ void World::removeChunks()
 	m_chunksToRemove.clear();
 }
 
+void World::updateChunk(Chunk* chunk)
+{
+	glm::vec3 chunkPos = chunk->getPositionGrid();
+	m_chunksToGenerate.insert(chunk);
+
+	// Update neighboring chunks
+	std::vector<glm::ivec3> neighborsPos = {
+		glm::ivec3(chunkPos.x - 1, 0, chunkPos.z),
+		glm::ivec3(chunkPos.x + 1, 0, chunkPos.z),
+		glm::ivec3(chunkPos.x, 0, chunkPos.z - 1),
+		glm::ivec3(chunkPos.x, 0, chunkPos.z + 1)
+	};
+
+	for (const auto& pos : neighborsPos) {
+		if (m_chunks.find(pos) != m_chunks.end()) {
+			Chunk* neighborChunk = m_chunks[pos];
+			if (neighborChunk) {
+				m_chunksToGenerate.insert(neighborChunk);
+			}
+		}
+	}
+}
+
 
 Chunk* World::getChunk(int x, int y, int z) const
 {
@@ -208,7 +231,7 @@ BlockType World::getBlockTypeWorld(const glm::ivec3& worldPos) const {
 
 bool World::isSolidBlock(int x, int y, int z) const
 {
-	Chunk* chunk = getChunk(x, y, z);
+	Chunk* chunk = getChunkWorldPos(x, y, z);
 	if (chunk) {
 		glm::vec3 localPos = glm::vec3(x, y, z) - chunk->getWorldPosition();
 		glm::ivec3 localBlockPos = glm::floor(localPos);

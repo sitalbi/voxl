@@ -39,6 +39,10 @@ Chunk::~Chunk()
 
 void Chunk::setBlockType(int x, int y, int z, BlockType type)
 {
+	if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_SIZE) {
+		return;
+	}
+	cubes[x][y][z] = type;
 }
 
 BlockType Chunk::getBlockType(int x, int y, int z) const

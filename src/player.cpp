@@ -133,6 +133,50 @@ void Player::processInput(GLFWwindow* window, float deltaTime)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
+
+    // If mouse left is pressed
+    onPressedMouse(GLFW_MOUSE_BUTTON_LEFT, [&]() {
+        if (m_blockFound) {
+            glm::vec3 newBlockPosition = m_blockPosition + m_blockNormal;
+
+            Chunk* chunk = m_world->getChunkWorldPos(newBlockPosition.x, newBlockPosition.y, newBlockPosition.z);
+
+            if (chunk != nullptr) {
+                int blockX = glm::mod(glm::floor(newBlockPosition.x), static_cast<float>(Chunk::CHUNK_SIZE));
+                int blockY = glm::mod(glm::floor(newBlockPosition.y), static_cast<float>(Chunk::CHUNK_HEIGHT));
+                int blockZ = glm::mod(glm::floor(newBlockPosition.z), static_cast<float>(Chunk::CHUNK_SIZE));
+
+                glm::ivec3 localBlockPos = glm::ivec3(blockX, blockY, blockZ);
+                if (localBlockPos.x >= 0 && localBlockPos.y >= 0 && localBlockPos.z >= 0 &&
+                    localBlockPos.x < Chunk::CHUNK_SIZE && localBlockPos.y < Chunk::CHUNK_HEIGHT && localBlockPos.z < Chunk::CHUNK_SIZE) {
+                    chunk->setBlockType(localBlockPos.x, localBlockPos.y, localBlockPos.z, BlockType::Dirt);
+
+                    m_world->updateChunk(chunk);
+                }
+            }
+        }
+        });
+
+    // If mouse right is pressed
+    onPressedMouse(GLFW_MOUSE_BUTTON_RIGHT, [&]() {
+        if (m_blockFound) {
+            Chunk* chunk = m_world->getChunkWorldPos(m_blockPosition.x, m_blockPosition.y, m_blockPosition.z);
+
+            if (chunk != nullptr) {
+                int blockX = glm::mod(glm::floor(m_blockPosition.x), static_cast<float>(Chunk::CHUNK_SIZE));
+                int blockY = glm::mod(glm::floor(m_blockPosition.y), static_cast<float>(Chunk::CHUNK_HEIGHT));
+                int blockZ = glm::mod(glm::floor(m_blockPosition.z), static_cast<float>(Chunk::CHUNK_SIZE));
+
+                glm::ivec3 localBlockPos = glm::ivec3(blockX, blockY, blockZ);
+                if (localBlockPos.x >= 0 && localBlockPos.y >= 0 && localBlockPos.z >= 0 &&
+                    localBlockPos.x < Chunk::CHUNK_SIZE && localBlockPos.y < Chunk::CHUNK_HEIGHT && localBlockPos.z < Chunk::CHUNK_SIZE) {
+                    chunk->setBlockType(localBlockPos.x, localBlockPos.y, localBlockPos.z, BlockType::None);
+
+                    m_world->updateChunk(chunk);
+                }
+            }
+        }
+        });
 }
 
 void Player::processMouseMovement(double xpos, double ypos)
@@ -283,6 +327,16 @@ void Player::onPressedKey(int key, const std::function<void()>& callback)
     }
     m_keyStates[key] = isPressed;
 }
+
+void Player::onPressedMouse(int button, const std::function<void()>& callback)
+{
+    bool isPressed = glfwGetMouseButton(glfwGetCurrentContext(), button) == GLFW_PRESS;
+    if (isPressed && !m_mouseButtonStates[button]) {
+        callback();
+    }
+    m_mouseButtonStates[button] = isPressed;
+}
+
 
 
 bool Player::rayCast(float maxDistance, glm::vec3& outBlockPosition, glm::vec3& outNormal) const

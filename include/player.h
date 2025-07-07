@@ -94,5 +94,7 @@ private:
 
     void onPressedKey(int key, const std::function<void()>& callback);
 
+    void onPressedMouse(int button, const std::function<void()>& callback);
+
     bool rayCast(float maxDistance, glm::vec3& outBlockPosition, glm::vec3& outNormal) const;
 };
