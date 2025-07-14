@@ -2,11 +2,18 @@
 
 Voxel game inspired by Minecraft written in C++ using OpenGL 4.5.
 
+## Implements
+
+This demo include the following features:
+
+- Chunk-based rendering
+- Infinite world generation
+- Basic player movement
+- Basic block interaction (placing and removing blocks)
+- Baked ambient occlusion (inspired by minecraft)
+
 ## TODO
 
-- Use a namespace (voxl)
-- Implement block selection and add/remove blocks
-- Add collision
-- Try to test loading chunk in player forward direction only (using frustum ?)
-- Implement day night cycle
-- Multithreading for chunk generation
+- Implement day night cycle (with a sun)
+- Biome generation
+- Swimming in water

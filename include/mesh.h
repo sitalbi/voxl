@@ -58,6 +58,7 @@ class Mesh {
 
 public:
 	Mesh();
+    Mesh(Mesh* other);
     ~Mesh();
 
 	void createCube();

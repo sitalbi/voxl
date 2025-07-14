@@ -4,6 +4,24 @@
 
 Mesh::Mesh() : VBO(0), VAO(0), EBO(0), NBO(0), TBO(0), AOBO(0), m_isSetup(false)
 {
+	
+}
+
+Mesh::Mesh(Mesh* other)
+{
+	vertices = other->vertices;
+	normals = other->normals;
+	texCoords = other->texCoords;
+	ao = other->ao;
+	indices = other->indices;
+	VAO = other->VAO;
+	VBO = other->VBO;
+	EBO = other->EBO;
+	NBO = other->NBO;
+	TBO = other->TBO;
+	AOBO = other->AOBO;
+	m_isSetup = other->m_isSetup;
+	
 }
 
 Mesh::~Mesh()

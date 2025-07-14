@@ -9,6 +9,8 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <FastNoiseLite.h>
+#include "thread.h"
 
 
 
@@ -16,6 +18,7 @@ class World : public ISubsystem
 {
 static const int NUM_CHUNK_PER_FRAME = 1;
 static const int CHUNK_LOAD_RADIUS = 3;
+static const size_t WORKER_COUNT = 4;
 
 public:
 	World();
@@ -68,8 +71,14 @@ public:
 	bool isSolidBlock(int x, int y, int z) const;
 
 	std::unordered_map<glm::ivec3, Chunk*>& getChunks() { return m_chunks; }
+	std::set<Chunk*>& getRenderList() { return m_chunksToRender; }
 	Player* getPlayer() const { return m_player; }
 
+	void setAmbientOcclusion();
+
+	fnl_state noise; 
+
+	bool useAmbientOcclusion = true;
 private:
 	int m_chunksProcessed = 0;
 
@@ -78,11 +87,18 @@ private:
 	std::set<Chunk*> m_chunksToGenerate; 
 	std::unordered_set<glm::ivec3> m_chunksToRemove; 
 	std::set<Chunk*> m_chunkMeshesToSetup; 
+	std::set<Chunk*> m_chunksToRender;
 
 	// For the moment we just store a single cube to test
 	std::unique_ptr<Chunk> m_chunk;
 
-	//std::vector<Chunk*> m_chunks;
+	// std::vector<Chunk*> m_chunks;
 	std::unordered_map<glm::ivec3, Chunk*> m_chunks;
+
+	// Multi-threading
+	ThreadPool                   meshThreadPool{ WORKER_COUNT };
+	std::mutex                   meshResultMutex;
+	std::queue<Chunk*>           meshResults;
+	std::unordered_set<Chunk*>   meshEnqueued;
 
 };

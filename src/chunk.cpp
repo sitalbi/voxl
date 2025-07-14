@@ -85,7 +85,7 @@ void Chunk::load()
 {
     m_indexCount = 0;
     BlockType type = BlockType::None;
-    fnl_state noise = fnlCreateState();
+    fnl_state& noise = m_world->noise;
     noise.noise_type = FNL_NOISE_PERLIN;
     noise.frequency = 0.015f;
 
@@ -141,7 +141,7 @@ void Chunk::load()
 void Chunk::generateMeshData()
 {
     m_mesh = std::make_unique<Mesh>();
-	m_transparentMesh = std::make_unique<Mesh>();
+    m_transparentMesh = std::make_unique<Mesh>();
     // All 6 directions
     std::vector<glm::ivec3> directions = {
         {-1, 0, 0},  // 0: left   
@@ -156,6 +156,13 @@ void Chunk::generateMeshData()
     for (const glm::ivec3& dir : directions) {
         processDirection(dir);
     }
+}
+
+void Chunk::swapMeshes()
+{
+	// Swap the active mesh with the generated mesh
+    m_activeMesh = std::make_unique<Mesh>(m_mesh.get());
+    m_activeTransparentMesh = std::make_unique<Mesh>(m_transparentMesh.get());
 }
 
 void Chunk::processDirection(const glm::ivec3& dir)
@@ -175,13 +182,17 @@ void Chunk::processDirection(const glm::ivec3& dir)
 				glm::ivec3 worldPos = currentPos + glm::ivec3(m_x, m_y, m_z);
                 BlockType blockType = cubes[x][y][z];
 
-                if (m_visited[x][y][z] || !isBlockFaceVisible(x, y, z, dir, blockType)) {
+				bool visible = isBlockFaceVisible(x, y, z, dir, blockType);
+                m_visibilityCache[x][y][z] = visible;
+
+                if (m_visited[x][y][z] || !visible) {
                     continue;
                 }
 
-				std::array<float, 4> ao = getAmbientOcclusion(currentPos, dir);
 
+				m_aoCache[x][y][z] = getAmbientOcclusion(currentPos, dir);
                 m_visited[x][y][z] = true;
+				std::array<float, 4>& ao = m_aoCache[x][y][z];
                 auto [width, height] = expandQuad(currentPos, dir, blockType, widthAxis, heightAxis, ao);
 
 				Quad quad;
@@ -220,12 +231,13 @@ std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec
     while (true) {
         glm::ivec3 nextPos = startPos + widthAxis * width;
 
-		nextAo = getAmbientOcclusion(nextPos, dir);
+		nextAo = m_aoCache[nextPos.x][nextPos.y][nextPos.z];
+		bool visible = m_visibilityCache[nextPos.x][nextPos.y][nextPos.z];
 
         if (!isValidPosition(nextPos) ||
             m_visited[nextPos.x][nextPos.y][nextPos.z] ||
             cubes[nextPos.x][nextPos.y][nextPos.z] != blockType ||
-            !isBlockFaceVisible(nextPos.x, nextPos.y, nextPos.z, dir, blockType) ||
+            !visible ||
             ao!=nextAo) {
             break;
         }
@@ -242,12 +254,13 @@ std::pair<int, int> Chunk::expandQuad(const glm::ivec3& startPos, const glm::vec
         for (int w = 0; w < width; w++) {
             glm::ivec3 checkPos = startPos + widthAxis * w + heightAxis * h;
 
-			nextAo = getAmbientOcclusion(checkPos, dir);
+			nextAo = m_aoCache[checkPos.x][checkPos.y][checkPos.z];
+			bool visible = m_visibilityCache[checkPos.x][checkPos.y][checkPos.z];
 
             if (!isValidPosition(checkPos) ||
                 m_visited[checkPos.x][checkPos.y][checkPos.z] ||
                 cubes[checkPos.x][checkPos.y][checkPos.z] != blockType ||
-                !isBlockFaceVisible(checkPos.x, checkPos.y, checkPos.z, dir, blockType) ||
+                !visible ||
                 nextAo != ao) {
                 rowGood = false;
                 break;
@@ -386,34 +399,44 @@ void Chunk::generateQuadGeometry(const Quad& quad, std::vector<glm::vec3>& verti
 
 
 	// Add ambient occlusion values
-	ao.push_back(quad.ao[0]);
-	ao.push_back(quad.ao[1]);
-	ao.push_back(quad.ao[2]);
-	ao.push_back(quad.ao[3]);
-
-    // Update diagonal calculation to use remapped values
-    float diagA = quad.ao[0] + quad.ao[3];
-    float diagB = quad.ao[1] + quad.ao[2];
-    bool flip = diagA > diagB;
-
-    // now emit either the normal or flipped triangle indices:
-    if (!flip) 
+    if (m_world->useAmbientOcclusion)
     {
-        indices.push_back(startIndex);     // v1
-        indices.push_back(startIndex + 1); // v2
-        indices.push_back(startIndex + 2); // v3
-        indices.push_back(startIndex + 2); // v3
-        indices.push_back(startIndex + 1); // v2
-        indices.push_back(startIndex + 3); // v4
+	    ao.push_back(quad.ao[0]);
+	    ao.push_back(quad.ao[1]);
+	    ao.push_back(quad.ao[2]);
+	    ao.push_back(quad.ao[3]);
+
+        float diagA = quad.ao[0] + quad.ao[3];
+        float diagB = quad.ao[1] + quad.ao[2];
+        bool flip = diagA > diagB;
+
+        if (!flip) 
+        {
+            indices.push_back(startIndex);     // v1
+            indices.push_back(startIndex + 1); // v2
+            indices.push_back(startIndex + 2); // v3
+            indices.push_back(startIndex + 2); // v3
+            indices.push_back(startIndex + 1); // v2
+            indices.push_back(startIndex + 3); // v4
+        }
+        else 
+        {
+            indices.push_back(startIndex);     // v1
+            indices.push_back(startIndex + 1); // v2
+            indices.push_back(startIndex + 3); // v4
+            indices.push_back(startIndex);     // v1
+            indices.push_back(startIndex + 3); // v4
+            indices.push_back(startIndex + 2); // v3
+        }
     }
-    else 
+    else
     {
         indices.push_back(startIndex);     // v1
         indices.push_back(startIndex + 1); // v2
-        indices.push_back(startIndex + 3); // v4
-        indices.push_back(startIndex);     // v1
-        indices.push_back(startIndex + 3); // v4
         indices.push_back(startIndex + 2); // v3
+        indices.push_back(startIndex + 2); // v3
+        indices.push_back(startIndex + 1); // v2
+        indices.push_back(startIndex + 3); // v4
     }
 }
 
@@ -539,15 +562,15 @@ inline bool Chunk::isBlockFaceVisible(int x, int y, int z, const glm::ivec3& dir
 
 void Chunk::draw() const
 {
-	if (m_mesh) {
-		m_mesh->draw();
+	if (m_activeMesh) {
+        m_activeMesh->draw();
 	}
 }
 
 void Chunk::drawTransparent() const
 {
-    if (m_transparentMesh) {
-        m_transparentMesh->draw();
+    if (m_activeTransparentMesh) {
+        m_activeTransparentMesh->draw();
     }
 }
 

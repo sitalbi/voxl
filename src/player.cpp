@@ -129,6 +129,9 @@ void Player::processInput(GLFWwindow* window, float deltaTime)
         }
         });
 
+    onPressedKey(GLFW_KEY_F3, [&]() {
+        m_world->setAmbientOcclusion();
+    });
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);

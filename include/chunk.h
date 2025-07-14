@@ -136,8 +136,11 @@ public:
 	// Load chunk data from noise function
 	void load();
 
+
 	// Generate mesh data for the chunk using greedy meshing
 	void generateMeshData();
+
+    void swapMeshes();
 
 	inline bool isBlockFaceVisible(int x, int y, int z, const glm::ivec3& dir, BlockType faceType) const;
 
@@ -152,17 +155,22 @@ public:
 
 
 private:
+
 	int m_x, m_y, m_z;
 	int m_indexCount;
 
 	bool m_visited[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
+    std::array<float, 4> m_aoCache[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
+	bool m_visibilityCache[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
 
     std::array<float, 4> nextAo;
 
 	World* m_world;
 
 	std::unique_ptr<Mesh> m_mesh;
+	std::unique_ptr<Mesh> m_activeMesh;
 	std::unique_ptr<Mesh> m_transparentMesh;
+	std::unique_ptr<Mesh> m_activeTransparentMesh;
 
 	void processDirection(const glm::ivec3& dir);
 

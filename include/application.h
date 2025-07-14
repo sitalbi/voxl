@@ -25,6 +25,8 @@ private:
 	double lastTime = 0.0f;
 	double currentTime = 0.0f;
 
+	bool aoToggle = true; // Ambient Occlusion toggle
+
 	void initUI();
 	void updateUI();
 

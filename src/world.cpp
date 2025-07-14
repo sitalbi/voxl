@@ -23,6 +23,8 @@ bool World::init()
 	{
 		return false;
 	}
+
+	noise = fnlCreateState();
 	return true;
 }
 
@@ -33,8 +35,6 @@ void World::update(float deltaTime)
 	generateChunks();
 
 	setupChunks();
-
-	// todo: maybe make a render list for chunks to render
 
 	unloadChunks(m_player->getWorldPosition());
 
@@ -103,39 +103,42 @@ void World::unloadChunks(glm::vec3 playerPosition)
 
 void World::generateChunks()
 {
-	m_chunksProcessed = 0;
-	auto it = m_chunksToGenerate.begin();
-	while (it != m_chunksToGenerate.end() && m_chunksProcessed < NUM_CHUNK_PER_FRAME)
-	{
-		Chunk* chunk = *it;
-		if (chunk) {
-			chunk->generateMeshData();
-			m_chunkMeshesToSetup.insert(chunk);
-			it = m_chunksToGenerate.erase(it); 
-			m_chunksProcessed++;
-		}
-		else {
-			it++;
+	for (Chunk* chunk : m_chunksToGenerate) {
+		if (meshEnqueued.insert(chunk).second) {
+			meshThreadPool.enqueue([this, chunk]() {
+				chunk->generateMeshData();
+				{
+					std::lock_guard<std::mutex> lock(meshResultMutex);
+					meshResults.push(chunk);
+				}
+				});
 		}
 	}
+	m_chunksToGenerate.clear();
 }
 
 void World::setupChunks()
 {
-	m_chunksProcessed = 0;
-	auto it = m_chunkMeshesToSetup.begin();
-	while (it != m_chunkMeshesToSetup.end() && m_chunksProcessed < NUM_CHUNK_PER_FRAME)
-	{
-		Chunk* chunk = *it;
-		if (chunk) {
-			chunk->getMesh()->setupMesh();
-			chunk->getTransparentMesh()->setupMesh();
-			it = m_chunkMeshesToSetup.erase(it); 
-			m_chunksProcessed++;
+	int processed = 0;
+	while (processed < NUM_CHUNK_PER_FRAME) {
+		Chunk* chunk = nullptr;
+		{   
+			// pop one result
+			std::lock_guard<std::mutex> lock(meshResultMutex);
+			if (meshResults.empty()) break;
+			chunk = meshResults.front();
+			meshResults.pop();
 		}
-		else {
-			it++;
-		}
+		if (!chunk) continue;
+
+		chunk->getMesh()->setupMesh();
+		chunk->getTransparentMesh()->setupMesh();
+		chunk->swapMeshes(); 
+
+		m_chunksToRender.insert(chunk); // TODO: sort render list by distance and angle to player (closest and visible chunks first)
+
+		meshEnqueued.erase(chunk);
+		++processed;
 	}
 }
 
@@ -143,21 +146,17 @@ void World::removeChunks()
 {
 	for (auto const& coord : m_chunksToRemove)
 	{
-		// 1) find the map entry
 		auto it = m_chunks.find(coord);
 		if (it == m_chunks.end())
 			continue;
 
 		Chunk* chunk = it->second;
 
-		// 2) cancel any pending work for that chunk
 		m_chunksToGenerate.erase(chunk);
-		m_chunkMeshesToSetup.erase(chunk);
+		m_chunksToRender.erase(chunk);
 
-		// 3) remove from the map
 		m_chunks.erase(it);
 
-		// 4) finally delete its memory
 		delete chunk;
 	}
 
@@ -239,4 +238,15 @@ bool World::isSolidBlock(int x, int y, int z) const
 			chunk->cubes[localBlockPos.x][localBlockPos.y][localBlockPos.z] != BlockType::Water;
 	}
 	return false;
+}
+
+void World::setAmbientOcclusion()
+{
+	useAmbientOcclusion = !useAmbientOcclusion;
+	for (auto& chunkPair : m_chunks) {
+		Chunk* chunk = chunkPair.second;
+		if (chunk) {
+			m_chunksToGenerate.insert(chunk);
+		}
+	}
 }

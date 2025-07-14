@@ -109,8 +109,6 @@ void Application::updateUI()
 		if (player) {
 			const glm::vec3& pos = player->getWorldPosition();
 			ImGui::Text("Player World Position: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
-			ImGui::Text("Player Chunk Position: %d, %d, %d", (int)(pos.x / Chunk::CHUNK_SIZE), 0, (int)(pos.z / Chunk::CHUNK_SIZE));
-			ImGui::Text("Block Position:%.1f, %.1f, %.1f", player->getBlockPosition().x, player->getBlockPosition().y, player->getBlockPosition().z);
 		}
 
 		// Crosshair

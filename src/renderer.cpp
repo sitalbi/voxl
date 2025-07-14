@@ -132,9 +132,8 @@ void Renderer::render()
 
 
 	// Draw the chunk
-	for (auto& chunkData : world->getChunks())
+	for (auto& chunk : world->getRenderList())
 	{
-		auto& chunk = chunkData.second;
 		if (chunk)
 		{
 			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getWorldPosition()));
@@ -146,9 +145,8 @@ void Renderer::render()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	// Draw transparent chunks
-	for (auto& chunkData : world->getChunks())
+	for (auto& chunk : world->getRenderList())
 	{
-		auto& chunk = chunkData.second;
 		if (chunk)
 		{
 			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getWorldPosition()));
