@@ -16,11 +16,12 @@
 
 class World : public ISubsystem
 {
-static const int NUM_CHUNK_PER_FRAME = 1;
-static const int CHUNK_LOAD_RADIUS = 3;
-static const size_t WORKER_COUNT = 4;
 
 public:
+static const int NUM_CHUNK_PER_FRAME = 8;
+static const int CHUNK_LOAD_RADIUS = 8;
+static const size_t WORKER_COUNT = 4;
+
 	World();
 	~World() override;
 

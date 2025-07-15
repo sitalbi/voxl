@@ -22,7 +22,7 @@ namespace std {
 	};
 }
 
-const float m_aoValues[4] = { 0.1f, 0.25f, 0.5f, 0.8f };
+const float m_aoValues[4] = { 0.0f, 0.25f, 0.5f, 0.8f };
 
 // Neighbor Indices
 const glm::ivec3 m_neighborFaceIndices[4] = {

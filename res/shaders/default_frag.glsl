@@ -4,9 +4,15 @@ out vec4 FragColor;
 
 in vec3 vTexCoord;
 in float vAo;
+in float vFogDepth;
 
 uniform sampler2DArray uTextureArray;
 uniform bool uColorBlock;
+
+uniform vec3   uFogColor;  // e.g. skyÅ]blue
+uniform float  uFogStart;  // distance where fog begins
+uniform float  uFogEnd;    // distance where fog is opaque
+
 
 void main()
 {
@@ -23,6 +29,13 @@ void main()
 	if(c.a < 0.5) {
 		discard;
 	}
+
+	// linear fog
+    float fogFactor = clamp((uFogEnd - vFogDepth) 
+                            / (uFogEnd - uFogStart), 
+                            0.0, 1.0);
+ 
+    c.rgb = mix(uFogColor, c.rgb, fogFactor);
 
 	FragColor = c;
 }

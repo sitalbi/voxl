@@ -84,6 +84,10 @@ bool Renderer::init()
 	shader->bind();
 	shader->setUniform1i("uTextureArray", 1);
 
+	shader->setUniform3f("uFogColor", 0.1f, 0.7f, 1.0f);
+	shader->setUniform1f("uFogStart", ((World::CHUNK_LOAD_RADIUS) * Chunk::CHUNK_SIZE)/2);
+	shader->setUniform1f("uFogEnd", ((World::CHUNK_LOAD_RADIUS) * Chunk::CHUNK_SIZE)/1.5f);
+
     
 	// Backface culling
 	glEnable(GL_CULL_FACE);
@@ -183,7 +187,7 @@ void Renderer::render()
 		highlightShader->bind();
 		highlightShader->setUniformMat4f("uView", world->getPlayer()->getView());
 		highlightShader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
-		highlightShader->setUniformMat4f("uModel", glm::scale(glm::translate(glm::mat4(1.0f), world->getPlayer()->getBlockPosition()), glm::vec3(1.05f, 1.05f, 1.05f)));
+		highlightShader->setUniformMat4f("uModel", glm::scale(glm::translate(glm::mat4(1.0f), world->getPlayer()->getBlockPosition()), glm::vec3(1.025f, 1.025f, 1.025f)));
 		cubeMesh->draw();
 
 		glDisable(GL_POLYGON_OFFSET_FILL);
