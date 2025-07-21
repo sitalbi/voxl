@@ -32,6 +32,7 @@ private:
 
 	std::unique_ptr<Shader> shader;
 	std::unique_ptr<Shader> highlightShader;
+	std::unique_ptr<Shader> skyShader;
 	std::unique_ptr<Mesh> cubeMesh;
 
 

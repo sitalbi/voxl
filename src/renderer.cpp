@@ -1,4 +1,4 @@
-#include "glad/glad.h"
+﻿#include "glad/glad.h"
 #include "renderer.h"
 #include <iostream>
 #include "voxl.h"
@@ -62,14 +62,14 @@ bool Renderer::init()
 	cubeMesh = std::make_unique<Mesh>();
 	cubeMesh->createCube();
 
-	// Set clear color
-	glClearColor(0.1f, 0.7f, 1.0f, 1.0f);
+	
 	
 	// Shader initialization
 	shader = std::make_unique<Shader>(VOXL_RES_DIR "/shaders/default_vert.glsl", VOXL_RES_DIR"/shaders/default_frag.glsl");
 
 	highlightShader = std::make_unique<Shader>(VOXL_RES_DIR "/shaders/highlight_vert.glsl", VOXL_RES_DIR "/shaders/highlight_frag.glsl");
-	highlightShader->bind();
+
+	skyShader = std::make_unique<Shader>(VOXL_RES_DIR "/shaders/sky_vert.glsl", VOXL_RES_DIR "/shaders/sky_frag.glsl");
 
 	// Texture atlas initialization
 	Texture textureAtlas;
@@ -83,8 +83,6 @@ bool Renderer::init()
 	textureAtlas.bind(1);
 	shader->bind();
 	shader->setUniform1i("uTextureArray", 1);
-
-	shader->setUniform3f("uFogColor", 0.1f, 0.7f, 1.0f);
 	shader->setUniform1f("uFogStart", ((World::CHUNK_LOAD_RADIUS) * Chunk::CHUNK_SIZE)/2);
 	shader->setUniform1f("uFogEnd", ((World::CHUNK_LOAD_RADIUS) * Chunk::CHUNK_SIZE)/1.5f);
 
@@ -126,16 +124,28 @@ void Renderer::shutdown()
 
 void Renderer::render()
 {
+	// Clear the screen
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glStencilMask(0x00);
 
-	// Shader uniforms
+	// 1 - Draw fullscreen sky quad
+	glDisable(GL_DEPTH_TEST);
+	skyShader->bind();
+	skyShader->setUniform3f("uSkyColor", world->getSkyColor().x, world->getSkyColor().y, world->getSkyColor().z);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	glEnable(GL_DEPTH_TEST);
+
+	// Default shader uniforms
 	shader->bind();
 	shader->setUniformMat4f("uView", world->getPlayer()->getView());
 	shader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
+	shader->setUniform1f("uLightIntensity", world->getLightIntensity());
+	shader->setUniform3f("uFogColor", world->getSkyColor().x, world->getSkyColor().y, world->getSkyColor().z);
 
 
-	// Draw the chunk
+	// 2 - Draw the world chunks
+	// Opaque chunks
 	for (auto& chunk : world->getRenderList())
 	{
 		if (chunk)
@@ -147,8 +157,8 @@ void Renderer::render()
 
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	// Draw transparent chunks
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// Transparent chunks
 	for (auto& chunk : world->getRenderList())
 	{
 		if (chunk)
@@ -160,7 +170,7 @@ void Renderer::render()
 	}
 	glDisable(GL_BLEND);
 
-	// Block highlight
+	// 3- Draw the selected block highlight
 	if (world->getPlayer()->isBlockFound()) 
 	{
 		glDisable(GL_CULL_FACE);

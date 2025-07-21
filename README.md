@@ -14,7 +14,6 @@ This demo include the following features:
 
 ## TODO
 
-- Implement ambient lighting
 - Implement day night cycle (with a sun)
 - Biome generation
 - Swimming in water

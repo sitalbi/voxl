@@ -172,6 +172,20 @@ void Chunk::processDirection(const glm::ivec3& dir)
     getExpansionAxes(dir, widthAxis, heightAxis);
 
     memset(m_visited, false, sizeof(m_visited));
+
+    // 1) Pre‑compute visibility & AO for every cell
+    for (int x = 0; x < CHUNK_SIZE; ++x) {
+        for (int y = 0; y < CHUNK_HEIGHT; ++y) {
+            for (int z = 0; z < CHUNK_SIZE; ++z) {
+                bool vis = isBlockFaceVisible(x, y, z, dir, cubes[x][y][z]);
+                m_visibilityCache[x][y][z] = vis;
+                if (vis) {
+                    m_aoCache[x][y][z] = getAmbientOcclusion({ x,y,z }, dir);
+                }
+            }
+        }
+    }
+
     std::vector<Quad> opaqueQuads;
     std::vector<Quad> transparentQuads;
 
@@ -182,15 +196,10 @@ void Chunk::processDirection(const glm::ivec3& dir)
 				glm::ivec3 worldPos = currentPos + glm::ivec3(m_x, m_y, m_z);
                 BlockType blockType = cubes[x][y][z];
 
-				bool visible = isBlockFaceVisible(x, y, z, dir, blockType);
-                m_visibilityCache[x][y][z] = visible;
-
-                if (m_visited[x][y][z] || !visible) {
+                if (m_visited[x][y][z] || !m_visibilityCache[x][y][z]) {
                     continue;
                 }
 
-
-				m_aoCache[x][y][z] = getAmbientOcclusion(currentPos, dir);
                 m_visited[x][y][z] = true;
 				std::array<float, 4>& ao = m_aoCache[x][y][z];
                 auto [width, height] = expandQuad(currentPos, dir, blockType, widthAxis, heightAxis, ao);
@@ -582,9 +591,12 @@ std::array<float, 4> Chunk::getAmbientOcclusion(const glm::ivec3& pos, const glm
         // which of the eight neighbours to test:
 		glm::ivec3 aoIndices = m_neighborFaceIndices[v];
 
-        int s1 = getNeighborType(pos, m_faceAos[face][aoIndices.x]) != BlockType::None;
-        int s2 = getNeighborType(pos, m_faceAos[face][aoIndices.z]) != BlockType::None;
-        int c = getNeighborType(pos, m_faceAos[face][aoIndices.y]) != BlockType::None;
+		BlockType neighborTypeX = getNeighborType(pos, m_faceAos[face][aoIndices.x]);
+		BlockType neighborTypeZ = getNeighborType(pos, m_faceAos[face][aoIndices.z]);
+		BlockType neighborTypeY = getNeighborType(pos, m_faceAos[face][aoIndices.y]);
+		int s1 = neighborTypeX != BlockType::None && neighborTypeX != BlockType::Water;
+		int s2 = neighborTypeZ != BlockType::None && neighborTypeZ != BlockType::Water;
+		int c = neighborTypeY != BlockType::None && neighborTypeY != BlockType::Water;
 
         int state = (s1 + s2 == 2)
             ? 0

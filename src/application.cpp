@@ -110,6 +110,8 @@ void Application::updateUI()
 			const glm::vec3& pos = player->getWorldPosition();
 			ImGui::Text("Player World Position: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
 		}
+		const float& lightIntensity = world->getLightIntensity();
+		ImGui::Text("Light Intensity: %.1f",lightIntensity);
 
 		// Crosshair
 		ImGui::SetNextWindowPos(ImVec2(window_width / 2.0f, window_height / 2.0f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));

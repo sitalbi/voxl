@@ -1,4 +1,4 @@
-#include "world.h"
+﻿#include "world.h"
 #include "application.h"
 #include <iostream>
 
@@ -39,6 +39,8 @@ void World::update(float deltaTime)
 	unloadChunks(m_player->getWorldPosition());
 
 	removeChunks();
+
+	updateLighting(deltaTime);
 }
 
 void World::shutdown()
@@ -184,6 +186,73 @@ void World::updateChunk(Chunk* chunk)
 			}
 		}
 	}
+}
+
+void World::updateLighting(float deltaTime)
+{
+	phaseTimer += deltaTime;
+
+	dayTimer += deltaTime;
+	if (dayTimer >= dayLength) {
+		dayTimer -= dayLength;
+	}
+
+	switch (phase)
+	{
+	case Day:
+		// hold at full brightness
+		m_lightIntensity = maxLight;
+		m_skyColor = m_skyDayColor; // Set sky color to day color
+		if (phaseTimer >= dayDuration) {
+			phaseTimer -= dayDuration;
+			phase = Dusk;
+		}
+		break;
+
+	case Dusk:
+	{
+		float t = phaseTimer / transitionDuration; // 0→1 over 10s
+
+		m_skyColor = glm::mix(m_skyDayColor, m_skyNightColor, t);
+
+		// light intensity fade
+		m_lightIntensity = maxLight + (minLight - maxLight) * t;
+
+		if (phaseTimer >= transitionDuration) {
+			phaseTimer -= transitionDuration;
+			phase = Night;
+		}
+		break;
+	}
+
+	case Night:
+		// hold at low brightness
+		m_lightIntensity = minLight;
+		m_skyColor = m_skyNightColor; // Set sky color to night color
+		if (phaseTimer >= nightDuration) {
+			phaseTimer -= nightDuration;
+			phase = Dawn;
+		}
+		break;
+
+	case Dawn:
+	{
+		float t = phaseTimer / transitionDuration; // 0→1
+		m_skyColor = glm::mix(m_skyNightColor, m_skyDayColor, t);
+
+		// light intensity rising
+		m_lightIntensity = minLight + (maxLight - minLight) * t;
+
+		if (phaseTimer >= transitionDuration) {
+			phaseTimer -= transitionDuration;
+			phase = Day;
+		}
+		break;
+	}
+	}
+
+	// clamp just in case
+	m_lightIntensity = glm::clamp(m_lightIntensity, minLight, maxLight);
 }
 
 

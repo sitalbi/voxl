@@ -30,11 +30,7 @@ static const size_t WORKER_COUNT = 4;
 	virtual void update(float deltaTime) override;
 	virtual void shutdown() override;
 
-	void loadChunks(glm::vec3 playerPosition);
-	void unloadChunks(glm::vec3 playerPosition);
-	void generateChunks();
-	void setupChunks();
-	void removeChunks();
+
 	void updateChunk(Chunk* chunk);
 
 	void setPlayer(Player* player) {
@@ -75,11 +71,17 @@ static const size_t WORKER_COUNT = 4;
 	std::set<Chunk*>& getRenderList() { return m_chunksToRender; }
 	Player* getPlayer() const { return m_player; }
 
+	float getLightIntensity() const { return m_lightIntensity; }
+	glm::vec3 getSkyColor() const { return m_skyColor; }
+
 	void setAmbientOcclusion();
 
 	fnl_state noise; 
 
 	bool useAmbientOcclusion = true;
+	
+	float dayTimer = 0.0f; // Timer for the day cycle
+	float dayLength = dayDuration + 2*transitionDuration + nightDuration; 
 private:
 	int m_chunksProcessed = 0;
 
@@ -96,10 +98,37 @@ private:
 	// std::vector<Chunk*> m_chunks;
 	std::unordered_map<glm::ivec3, Chunk*> m_chunks;
 
+	// Lighting
+	float m_lightIntensity = 1.0f;
+	const glm::vec3 m_skyDayColor = glm::vec3(0.1f, 0.7f, 1.0f); // Day sky color
+	const glm::vec3 m_skyNightColor = glm::vec3(0.0f, 0.01f, 0.1f); // Night sky color
+	const glm::vec3 m_skyDuskColor = glm::vec3(1.0f, 0.5f, 0.2f); // Dusk sky color
+	const glm::vec3 m_skyDawnColor = m_skyDuskColor;
+	glm::vec3 m_skyColor;
+
+	enum Phase { Day, Dusk, Night, Dawn } phase = Day;
+	float phaseTimer = 0.0f;    
+
+	float dayDuration = 5.0f; 
+	float transitionDuration = 10.0f; 
+	float nightDuration = 5.0f;  
+
+	// your min/max
+	const float maxLight = 1.0f;
+	const float minLight = 0.05f;
+
 	// Multi-threading
 	ThreadPool                   meshThreadPool{ WORKER_COUNT };
 	std::mutex                   meshResultMutex;
 	std::queue<Chunk*>           meshResults;
 	std::unordered_set<Chunk*>   meshEnqueued;
+
+	void loadChunks(glm::vec3 playerPosition);
+	void unloadChunks(glm::vec3 playerPosition);
+	void generateChunks();
+	void setupChunks();
+	void removeChunks();
+
+	void updateLighting(float deltaTime);
 
 };
