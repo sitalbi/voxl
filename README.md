@@ -10,7 +10,7 @@ This demo include the following features:
 - Infinite world generation using basic thread pool for chunk generation
 - Basic player movement
 - Basic block interaction (placing and removing blocks)
-- Baked ambient occlusion (inspired by minecraft)
+- Baked ambient occlusion 
 
 ## TODO
 
