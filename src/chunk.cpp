@@ -102,7 +102,14 @@ void Chunk::load()
                         type = BlockType::Stone;
                     }
                     else if (y == maxHeight - 1) {
-                        type = BlockType::Grass;
+
+						if (maxHeight <= WATER_HEIGHT) {
+							type = BlockType::Sand;
+						}
+						else {
+							type = BlockType::Grass;
+						}
+
 					}
                     else {
                         type = BlockType::Dirt;

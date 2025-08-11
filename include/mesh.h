@@ -54,6 +54,18 @@ static std::vector<unsigned int> cube_index_data = {
     20, 21, 22, 20, 22, 23  // Bottom face
 };
 
+static const std::vector<glm::vec3> quad_vertex_data = {
+    { -0.5f, 0.0f, 0.5f},  // Bottom left
+    { 0.5f, 0.0f, 0.5f },  // Bottom right
+    { 0.5f, 0.0f, -0.5f }, // Top right
+    { -0.5f, 0.0f, -0.5f }  // Top left
+};
+
+static std::vector<unsigned int> quad_index_data = {
+	0, 1, 2, // First triangle
+	0, 2, 3  // Second triangle
+};
+
 class Mesh {
 
 public:
@@ -62,6 +74,8 @@ public:
     ~Mesh();
 
 	void createCube();
+
+    void  createQuad();
 
 	void setupMesh();
 

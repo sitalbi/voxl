@@ -11,14 +11,26 @@
 #include <set>
 #include <FastNoiseLite.h>
 #include "thread.h"
+#include <skybox.h>
 
+struct SkyPalette {
+	glm::vec3 horizon; 
+	glm::vec3 zenith;
+};
 
+static inline glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t) { 
+	return a + (b - a) * t; 
+}
+
+static inline SkyPalette Lerp(const SkyPalette& a, const SkyPalette& b, float t) {
+	return { Lerp(a.horizon,b.horizon,t), Lerp(a.zenith,b.zenith,t) };
+}
 
 class World : public ISubsystem
 {
 
 public:
-static const int NUM_CHUNK_PER_FRAME = 8;
+static const int NUM_CHUNK_PER_FRAME = 1;
 static const int CHUNK_LOAD_RADIUS = 8;
 static const size_t WORKER_COUNT = 4;
 
@@ -72,7 +84,8 @@ static const size_t WORKER_COUNT = 4;
 	Player* getPlayer() const { return m_player; }
 
 	float getLightIntensity() const { return m_lightIntensity; }
-	glm::vec3 getSkyColor() const { return m_skyColor; }
+	SkyPalette getSkyColor() const { return m_skyColor; }
+	glm::vec3 getSunPosition() const { return m_sunPosition; }
 
 	void setAmbientOcclusion();
 
@@ -81,7 +94,10 @@ static const size_t WORKER_COUNT = 4;
 	bool useAmbientOcclusion = true;
 	
 	float dayTimer = 0.0f; // Timer for the day cycle
-	float dayLength = dayDuration + 2*transitionDuration + nightDuration; 
+	float dayLength = 0.0f; 
+	inline float time01() { return float(ticks) / kTicksPerDay; }
+
+
 private:
 	int m_chunksProcessed = 0;
 
@@ -92,30 +108,36 @@ private:
 	std::set<Chunk*> m_chunkMeshesToSetup; 
 	std::set<Chunk*> m_chunksToRender;
 
-	// For the moment we just store a single cube to test
-	std::unique_ptr<Chunk> m_chunk;
-
 	// std::vector<Chunk*> m_chunks;
 	std::unordered_map<glm::ivec3, Chunk*> m_chunks;
 
 	// Lighting
 	float m_lightIntensity = 1.0f;
-	const glm::vec3 m_skyDayColor = glm::vec3(0.1f, 0.7f, 1.0f); // Day sky color
-	const glm::vec3 m_skyNightColor = glm::vec3(0.0f, 0.01f, 0.1f); // Night sky color
-	const glm::vec3 m_skyDuskColor = glm::vec3(1.0f, 0.5f, 0.2f); // Dusk sky color
-	const glm::vec3 m_skyDawnColor = m_skyDuskColor;
-	glm::vec3 m_skyColor;
+	
+	SkyPalette m_skyNight{ {0.035f, 0.008f, 0.141f}, {0.0f,0.0f,0.0f} };
+	SkyPalette m_skySunrise{ {0.659f, 0.0f, 0.659f}, {0.0f, 0.706f, 1.0f} };
+	SkyPalette m_skyDay{ {0.655f, 0.898f, 1.0f}, {0.0f, 0.706f, 1.0f} };
+	SkyPalette m_skySunset = { {1.0f, 0.7f, 0.482f}, {0.0f, 0.0f, 0.0f} };
+	SkyPalette m_skyColor = m_skyDay; // Default to day color
 
-	enum Phase { Day, Dusk, Night, Dawn } phase = Day;
+	enum Phase { Day, Sunset, Night, Sunrise } phase = Day;
 	float phaseTimer = 0.0f;    
 
-	float dayDuration = 5.0f; 
-	float transitionDuration = 10.0f; 
-	float nightDuration = 5.0f;  
+	float dayDuration = 10.0f; 
+	float transitionDuration = 2.5f; 
+	float nightDuration = 10.0f;  
 
-	// your min/max
 	const float maxLight = 1.0f;
 	const float minLight = 0.05f;
+
+	glm::vec3 m_sunPosition = glm::vec3(0.0f, 1.0f, 0.0f); 
+
+	// Time
+	uint32_t ticks = 0;
+	static constexpr uint32_t kTicksPerDay = 24000;
+	static constexpr float    kSecondsPerDay = 1200.0f; // 20 real min/day
+
+	void advanceTime(float deltaTime);
 
 	// Multi-threading
 	ThreadPool                   meshThreadPool{ WORKER_COUNT };
@@ -130,5 +152,6 @@ private:
 	void removeChunks();
 
 	void updateLighting(float deltaTime);
+
 
 };

@@ -1,4 +1,4 @@
-#include "application.h"
+﻿#include "application.h"
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -112,6 +112,7 @@ void Application::updateUI()
 		}
 		const float& lightIntensity = world->getLightIntensity();
 		ImGui::Text("Light Intensity: %.1f",lightIntensity);
+		//ImGui::Text("Day hour: %.1f", world->hour());
 
 		// Crosshair
 		ImGui::SetNextWindowPos(ImVec2(window_width / 2.0f, window_height / 2.0f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));

@@ -101,12 +101,12 @@ struct Atlas {
 		}},
 		// BlockType::Sand  (4)
 		{{
-			makeRect(3,14), // left
-			makeRect(3,14), // right
-			makeRect(3,14), // bottom
-			makeRect(3,14), // top
-			makeRect(3,14), // back
-			makeRect(3,14)  // front
+			makeRect(2,14), // left
+			makeRect(2,14), // right
+			makeRect(2,14), // bottom
+			makeRect(2,14), // top
+			makeRect(2,14), // back
+			makeRect(2,14)  // front
 		}},
 		// BlockType::Tree  (5)
 		{{

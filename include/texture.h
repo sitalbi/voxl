@@ -15,14 +15,15 @@ public:
 	Texture();
 	~Texture();
 
-	static unsigned int loadFromFile(const char* filePath);
+	bool loadFromFile(const char* filePath);
 	bool loadTextureArrayFromFile(const char* filePath, int cols, int rows);
+	bool loadCubemap(const char* filePath);
 	void bind(unsigned int slot = 0) const;
+	void bindCubemap(unsigned int slot = 0) const;
 	void unbind() const;
 	unsigned int getID() const { return m_textureID; }
 
 private:
 
 	unsigned int m_textureID;
-	int width, height;
 };

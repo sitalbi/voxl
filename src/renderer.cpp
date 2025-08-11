@@ -56,13 +56,18 @@ bool Renderer::init()
 	}
 
 	// Load crosshair texture
-	m_crosshairTextureId = Texture::loadFromFile(VOXL_RES_DIR "/textures/crosshair.png");
+	Texture crosshairTexture;
+	crosshairTexture.loadFromFile(VOXL_RES_DIR "/textures/crosshair.png");
+	m_crosshairTextureId = crosshairTexture.getID();
 
 	// Cube mesh
 	cubeMesh = std::make_unique<Mesh>();
 	cubeMesh->createCube();
 
-	
+	// Skybox
+	skybox = std::make_unique<Skybox>();
+	skybox->init();
+
 	
 	// Shader initialization
 	shader = std::make_unique<Shader>(VOXL_RES_DIR "/shaders/default_vert.glsl", VOXL_RES_DIR"/shaders/default_frag.glsl");
@@ -79,12 +84,10 @@ bool Renderer::init()
 		return false;
 	}
 	
-	// Set the texture uniform in the shader
+	// Set the texture uniform in the default shader
 	textureAtlas.bind(1);
 	shader->bind();
 	shader->setUniform1i("uTextureArray", 1);
-	shader->setUniform1f("uFogStart", ((World::CHUNK_LOAD_RADIUS) * Chunk::CHUNK_SIZE)/2);
-	shader->setUniform1f("uFogEnd", ((World::CHUNK_LOAD_RADIUS) * Chunk::CHUNK_SIZE)/1.5f);
 
     
 	// Backface culling
@@ -118,8 +121,22 @@ void Renderer::update(float deltaTime)
 
 void Renderer::shutdown()
 {
-	shader->unbind();
 	glfwDestroyWindow(window);
+}
+
+void Renderer::renderSky()
+{
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDepthFunc(GL_LEQUAL);
+	skyShader->bind();
+	skyShader->setUniformMat4f("uView", glm::mat3(world->getPlayer()->getView())); // Use mat3 to ignore translation
+	skyShader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
+	skyShader->setUniformVec3f("uHorizonColor", world->getSkyColor().horizon);
+	skyShader->setUniformVec3f("uZenithColor", world->getSkyColor().zenith);
+	skybox->draw();
+	glDepthFunc(GL_LESS);
+	glDisable(GL_BLEND);
 }
 
 void Renderer::render()
@@ -128,23 +145,15 @@ void Renderer::render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glStencilMask(0x00);
 
-	// 1 - Draw fullscreen sky quad
-	glDisable(GL_DEPTH_TEST);
-	skyShader->bind();
-	skyShader->setUniform3f("uSkyColor", world->getSkyColor().x, world->getSkyColor().y, world->getSkyColor().z);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-
-	glEnable(GL_DEPTH_TEST);
+	glClearColor(world->getSkyColor().horizon.x, world->getSkyColor().horizon.y, world->getSkyColor().horizon.z, 1.0f);
 
 	// Default shader uniforms
 	shader->bind();
 	shader->setUniformMat4f("uView", world->getPlayer()->getView());
 	shader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
 	shader->setUniform1f("uLightIntensity", world->getLightIntensity());
-	shader->setUniform3f("uFogColor", world->getSkyColor().x, world->getSkyColor().y, world->getSkyColor().z);
 
-
-	// 2 - Draw the world chunks
+	// Draw the world chunks
 	// Opaque chunks
 	for (auto& chunk : world->getRenderList())
 	{
@@ -163,14 +172,17 @@ void Renderer::render()
 	{
 		if (chunk)
 		{
-			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getWorldPosition()));
+			//shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getWorldPosition()));
 
 			chunk->drawTransparent();
 		}
 	}
 	glDisable(GL_BLEND);
 
-	// 3- Draw the selected block highlight
+	// Draw Sky
+	renderSky();
+
+	// Draw the selected block highlight
 	if (world->getPlayer()->isBlockFound()) 
 	{
 		glDisable(GL_CULL_FACE);
@@ -220,8 +232,6 @@ void Renderer::render()
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glEnable(GL_CULL_FACE);
 	}
-
-	
 }
 
 void Renderer::renderUI()

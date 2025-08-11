@@ -110,7 +110,7 @@ class Chunk {
 
 public:
 	static const int CHUNK_SIZE = 48;
-	static const int CHUNK_HEIGHT = 48;
+	static const int CHUNK_HEIGHT = 64;
 	static const int WATER_HEIGHT = 15; 
 
 	Chunk(int x = 0, int y = 0, int z = 0, World* world = nullptr);

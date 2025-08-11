@@ -21,7 +21,6 @@ Mesh::Mesh(Mesh* other)
 	TBO = other->TBO;
 	AOBO = other->AOBO;
 	m_isSetup = other->m_isSetup;
-	
 }
 
 Mesh::~Mesh()
@@ -76,6 +75,32 @@ void Mesh::createCube()
 	m_isSetup = err == GL_NO_ERROR;
 
     glBindVertexArray(0);
+}
+
+void Mesh::createQuad()
+{
+	// Vertex array
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+	// Vertex buffer
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, quad_vertex_data.size() * sizeof(glm::vec3), quad_vertex_data.data(), GL_STATIC_DRAW);
+	// Set vertex attribute for position (location 0)
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+	// Index buffer
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, quad_index_data.size() * sizeof(unsigned int), quad_index_data.data(), GL_STATIC_DRAW);
+	indices = quad_index_data;
+	GLenum err;
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error: " << err << std::endl;
+	}
+	m_isSetup = err == GL_NO_ERROR;
+	glBindVertexArray(0);
 }
 
 void Mesh::setupMesh()

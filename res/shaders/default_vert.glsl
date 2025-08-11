@@ -7,7 +7,6 @@ layout(location = 3) in float aAo;
 
 out vec3 vTexCoord;
 out float vAo;
-out float vFogDepth;
 
 uniform mat4 uModel;
 uniform mat4 uView;
@@ -18,7 +17,6 @@ void main()
 	vAo = aAo; 
 	vTexCoord = aTexCoord;
 	vec4 viewPos = uView * uModel * vec4(aPos, 1.0);
-    vFogDepth    = -viewPos.z;
 
     gl_Position = uProjection * viewPos;
 }

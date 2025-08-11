@@ -1,12 +1,20 @@
 ﻿#version 450 core
-// no inputs
 
-void main() {
-    // fullscreen triangle trick: 3 verts cover the whole screen
-    const vec2 verts[3] = vec2[3](
-        vec2(-1.0, -1.0),
-        vec2( 3.0, -1.0),
-        vec2(-1.0,  3.0)
-    );
-    gl_Position = vec4(verts[gl_VertexID], 0.0, 1.0);
-}
+layout (location = 0) in vec3 aPos;
+layout (location = 2) in vec3 aUV;
+
+out vec2 vUV;
+
+uniform mat4 uProjection;
+uniform mat4 uView;
+
+void main()
+{
+    vUV = vec2(aUV);
+    
+    vec4 viewPos = uView * vec4(aPos, 1.0);
+
+    vec4 pos  = uProjection * viewPos;
+    gl_Position = pos;
+    gl_Position.z = pos.w; // ensure depth is correct for skybox
+}  

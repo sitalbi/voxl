@@ -25,6 +25,9 @@ bool World::init()
 	}
 
 	noise = fnlCreateState();
+	dayLength = dayDuration + 2*transitionDuration + nightDuration;
+	dayTimer = 0.0f;
+
 	return true;
 }
 
@@ -46,6 +49,11 @@ void World::update(float deltaTime)
 void World::shutdown()
 {
 
+}
+
+void World::advanceTime(float deltaTime)
+{
+	ticks = (ticks + uint32_t(deltaTime * (kTicksPerDay / kSecondsPerDay))) % kTicksPerDay;
 }
 
 void World::loadChunks(glm::vec3 playerPosition)
@@ -200,59 +208,46 @@ void World::updateLighting(float deltaTime)
 	switch (phase)
 	{
 	case Day:
-		// hold at full brightness
 		m_lightIntensity = maxLight;
-		m_skyColor = m_skyDayColor; // Set sky color to day color
-		if (phaseTimer >= dayDuration) {
-			phaseTimer -= dayDuration;
-			phase = Dusk;
-		}
+		m_skyColor = m_skyDay;
+		if (phaseTimer >= dayDuration) { phaseTimer -= dayDuration; phase = Sunset; }
 		break;
 
-	case Dusk:
+	case Sunset:
 	{
-		float t = phaseTimer / transitionDuration; // 0→1 over 10s
+		float t = glm::clamp(phaseTimer / transitionDuration, 0.0f, 1.0f);
+		// Two-step: Day -> Sunset -> Night (split duration in half)
+		if (t < 0.5f) m_skyColor = Lerp(m_skyDay, m_skySunset, t * 2.0f);
+		else          m_skyColor = Lerp(m_skySunset, m_skyNight, (t - 0.5f) * 2.0f);
 
-		m_skyColor = glm::mix(m_skyDayColor, m_skyNightColor, t);
-
-		// light intensity fade
 		m_lightIntensity = maxLight + (minLight - maxLight) * t;
 
-		if (phaseTimer >= transitionDuration) {
-			phaseTimer -= transitionDuration;
-			phase = Night;
-		}
+		if (phaseTimer >= transitionDuration) { phaseTimer -= transitionDuration; phase = Night; }
 		break;
 	}
 
 	case Night:
-		// hold at low brightness
 		m_lightIntensity = minLight;
-		m_skyColor = m_skyNightColor; // Set sky color to night color
-		if (phaseTimer >= nightDuration) {
-			phaseTimer -= nightDuration;
-			phase = Dawn;
-		}
+		m_skyColor = m_skyNight;
+		if (phaseTimer >= nightDuration) { phaseTimer -= nightDuration; phase = Sunrise; }
 		break;
 
-	case Dawn:
+	case Sunrise:
 	{
-		float t = phaseTimer / transitionDuration; // 0→1
-		m_skyColor = glm::mix(m_skyNightColor, m_skyDayColor, t);
+		float t = glm::clamp(phaseTimer / transitionDuration, 0.0f, 1.0f);
+		// Two-step: Night -> Sunrise -> Day
+		if (t < 0.5f) m_skyColor = Lerp(m_skyNight, m_skySunrise, t * 2.0f);
+		else          m_skyColor = Lerp(m_skySunrise, m_skyDay, (t - 0.5f) * 2.0f);
 
-		// light intensity rising
 		m_lightIntensity = minLight + (maxLight - minLight) * t;
 
-		if (phaseTimer >= transitionDuration) {
-			phaseTimer -= transitionDuration;
-			phase = Day;
-		}
+		if (phaseTimer >= transitionDuration) { phaseTimer -= transitionDuration; phase = Day; }
 		break;
 	}
 	}
 
-	// clamp just in case
 	m_lightIntensity = glm::clamp(m_lightIntensity, minLight, maxLight);
+
 }
 
 

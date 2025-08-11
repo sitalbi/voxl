@@ -13,18 +13,17 @@ Texture::~Texture()
 {
 }
 
-unsigned int Texture::loadFromFile(const char* filePath)
+bool Texture::loadFromFile(const char* filePath)
 {
-	stbi_set_flip_vertically_on_load(true);
+	stbi_set_flip_vertically_on_load(false);
     int w, h;
 	unsigned char* data = stbi_load(filePath, &w, &h, nullptr, 4);
 	if (!data) {
 		std::cerr << "Failed to load texture: " << filePath << std::endl;
 		return false;
 	}
-    unsigned int textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
+	glGenTextures(1, &m_textureID);
+	glBindTexture(GL_TEXTURE_2D, m_textureID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	// Set texture parameters
@@ -33,7 +32,8 @@ unsigned int Texture::loadFromFile(const char* filePath)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	stbi_image_free(data);
-	return textureID;
+
+	return true;
 }
 
 bool Texture::loadTextureArrayFromFile(const char* filePath,
@@ -105,6 +105,67 @@ bool Texture::loadTextureArrayFromFile(const char* filePath,
     return true;
 }
 
+bool Texture::loadCubemap(const char* filePath)
+{
+    // 0) Load the atlas (disable flip so row math is predictable)
+    stbi_set_flip_vertically_on_load(false);
+    int atlasW = 0, atlasH = 0, channels = 0;
+    unsigned char* atlas = stbi_load(filePath, &atlasW, &atlasH, &channels, 4);
+    if (!atlas) { std::cerr << "Failed to load: " << filePath << "\n"; return false; }
+
+    // 1) Grid info (adjust if your layout differs)
+    int cols = 3, rows = 2;              // 3~2 grid of faces
+    int faceW = atlasW / cols;
+    int faceH = atlasH / rows;
+
+    // 2) Create cubemap
+    glGenTextures(1, &m_textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureID);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    // 3) Tell GL how to walk rows in the big atlas
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, atlasW);
+
+    // 4) Map grid cells -> cube faces (col,row). Tweak to match your atlas.
+    struct Face { GLenum target; int c, r; };
+    Face map[6] = {
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_X, 2, 0 }, // +X (right)
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, 1 }, // -X (left)
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 1, 0 }, // +Y (top)
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, 0 }, // -Y (bottom)
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 2, 1 }, // +Z (front)
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 1, 1 }, // -Z (back)
+    };
+
+    // 5) Upload each face by skipping into the atlas
+    for (const Face& f : map) {
+        int skipX = f.c * faceW;
+        int skipY = f.r * faceH;
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, skipX);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, skipY);
+
+        glTexImage2D(f.target, 0,
+            GL_RGBA,                // or GL_RGBA8 if youfre not using sRGB
+            faceW, faceH, 0,
+            GL_RGBA, GL_UNSIGNED_BYTE,
+            atlas);
+    }
+
+    // 6) Reset pixel store + cleanup
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    stbi_image_free(atlas);
+
+    return true;
+}
+
+
 
 void Texture::bind(unsigned int slot) const
 {
@@ -112,6 +173,14 @@ void Texture::bind(unsigned int slot) const
 		glActiveTexture(GL_TEXTURE0 + slot);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, m_textureID);
 	}
+}
+
+void Texture::bindCubemap(unsigned int slot) const
+{
+    if (slot >= 0 && slot < 32) {
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureID);
+    }
 }
 
 void Texture::unbind() const
