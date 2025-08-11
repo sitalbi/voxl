@@ -12,6 +12,10 @@ This demo include the following features:
 - Basic block interaction (placing and removing blocks)
 - Baked ambient occlusion 
 
+## Visuals
+![voxl image](https://simono.fr/voxl2.png)
+![voxl gif](https://simono.fr/voxl.gif)
+
 ## TODO
 
 - Implement day night cycle (with a sun)
