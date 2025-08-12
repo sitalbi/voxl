@@ -13,6 +13,10 @@ This demo include the following features:
 - Baked ambient occlusion 
 - Day night/cycle
 
+## Visuals
+![voxl image](https://simono.fr/voxl2.png)
+![voxl gif](https://simono.fr/voxl.gif)
+
 ## TODO
 
 - Biome generation
