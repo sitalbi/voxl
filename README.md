@@ -14,8 +14,10 @@ This demo include the following features:
 - Day night/cycle
 
 ## Visuals
-![voxl image](https://simono.fr/voxl2.png)
-![voxl gif](https://simono.fr/voxl.gif)
+<p align="center">
+  <img src="https://simono.fr/voxl2.png" width="650"><br><br><br>
+  <img src="https://github.com/sitalbi/voxl/blob/main/res/repo/voxl.gif" width="650">
+</p>
 
 ## TODO
 
