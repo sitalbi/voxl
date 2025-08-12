@@ -11,9 +11,10 @@ This demo include the following features:
 - Basic player movement
 - Basic block interaction (placing and removing blocks)
 - Baked ambient occlusion 
+- Day night/cycle
 
 ## TODO
 
-- Implement day night cycle (with a sun)
 - Biome generation
 - Swimming in water
+- Light emitting block

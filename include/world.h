@@ -85,15 +85,15 @@ static const size_t WORKER_COUNT = 4;
 
 	float getLightIntensity() const { return m_lightIntensity; }
 	SkyPalette getSkyColor() const { return m_skyColor; }
-	glm::vec3 getSunPosition() const { return m_sunPosition; }
+	glm::vec3 getSunDir() const { return m_sunDir; }
 
 	void setAmbientOcclusion();
 
-	fnl_state noise; 
+	fnl_state noise;
 
 	bool useAmbientOcclusion = true;
 	
-	float dayTimer = 0.0f; // Timer for the day cycle
+	float dayTimer = 0.0f; 
 	float dayLength = 0.0f; 
 	inline float time01() { return float(ticks) / kTicksPerDay; }
 
@@ -124,13 +124,13 @@ private:
 	float phaseTimer = 0.0f;    
 
 	float dayDuration = 10.0f; 
-	float transitionDuration = 2.5f; 
+	float transitionDuration = 5.0f; 
 	float nightDuration = 10.0f;  
 
 	const float maxLight = 1.0f;
 	const float minLight = 0.05f;
 
-	glm::vec3 m_sunPosition = glm::vec3(0.0f, 1.0f, 0.0f); 
+	glm::vec3 m_sunDir;
 
 	// Time
 	uint32_t ticks = 0;
@@ -140,10 +140,10 @@ private:
 	void advanceTime(float deltaTime);
 
 	// Multi-threading
-	ThreadPool                   meshThreadPool{ WORKER_COUNT };
-	std::mutex                   meshResultMutex;
-	std::queue<Chunk*>           meshResults;
-	std::unordered_set<Chunk*>   meshEnqueued;
+	ThreadPool meshThreadPool{ WORKER_COUNT };
+	std::mutex meshResultMutex;
+	std::queue<Chunk*> meshResults;
+	std::unordered_set<Chunk*> meshEnqueued;
 
 	void loadChunks(glm::vec3 playerPosition);
 	void unloadChunks(glm::vec3 playerPosition);
@@ -152,6 +152,4 @@ private:
 	void removeChunks();
 
 	void updateLighting(float deltaTime);
-
-
 };

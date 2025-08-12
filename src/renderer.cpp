@@ -134,6 +134,11 @@ void Renderer::renderSky()
 	skyShader->setUniformMat4f("uProjection", world->getPlayer()->getProjection());
 	skyShader->setUniformVec3f("uHorizonColor", world->getSkyColor().horizon);
 	skyShader->setUniformVec3f("uZenithColor", world->getSkyColor().zenith);
+	skyShader->setUniformVec3f("uSunDir", world->getSunDir());
+	skyShader->setUniform3f("uSunColor", 1.0f, 0.96f, 0.85f);
+	skyShader->setUniform1f("uSunAngularRadius", 0.035f); // ~1.15° (stylized; real ~0.00465)
+	skyShader->setUniform1f("uSunSoftness", 0.015f);     // feathering
+	skyShader->setUniform1f("uSunIntensity", 1.0f);      // tweak to taste
 	skybox->draw();
 	glDepthFunc(GL_LESS);
 	glDisable(GL_BLEND);
@@ -172,7 +177,7 @@ void Renderer::render()
 	{
 		if (chunk)
 		{
-			//shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getWorldPosition()));
+			shader->setUniformMat4f("uModel", glm::translate(glm::mat4(1.0f), chunk->getWorldPosition()));
 
 			chunk->drawTransparent();
 		}

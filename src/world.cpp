@@ -216,13 +216,26 @@ void World::updateLighting(float deltaTime)
 	case Sunset:
 	{
 		float t = glm::clamp(phaseTimer / transitionDuration, 0.0f, 1.0f);
-		// Two-step: Day -> Sunset -> Night (split duration in half)
-		if (t < 0.5f) m_skyColor = Lerp(m_skyDay, m_skySunset, t * 2.0f);
-		else          m_skyColor = Lerp(m_skySunset, m_skyNight, (t - 0.5f) * 2.0f);
 
+		const float split = 0.75f; // 75% of time: Day -> Sunset, 25%: Sunset -> Night
+		const float eps = 1e-6f; // avoid div-by-zero
+
+		if (t < split) {
+			float u = t / glm::max(split, eps);            // 0..1 over first 75%
+			m_skyColor = Lerp(m_skyDay, m_skySunset, u);
+		}
+		else {
+			float u = (t - split) / glm::max(1.0f - split, eps); // 0..1 over last 25%
+			m_skyColor = Lerp(m_skySunset, m_skyNight, u);
+		}
+
+		// Keep intensity simple: still lerp across the whole transition
 		m_lightIntensity = maxLight + (minLight - maxLight) * t;
 
-		if (phaseTimer >= transitionDuration) { phaseTimer -= transitionDuration; phase = Night; }
+		if (phaseTimer >= transitionDuration) {
+			phaseTimer -= transitionDuration;
+			phase = Night;
+		}
 		break;
 	}
 
@@ -235,9 +248,18 @@ void World::updateLighting(float deltaTime)
 	case Sunrise:
 	{
 		float t = glm::clamp(phaseTimer / transitionDuration, 0.0f, 1.0f);
-		// Two-step: Night -> Sunrise -> Day
-		if (t < 0.5f) m_skyColor = Lerp(m_skyNight, m_skySunrise, t * 2.0f);
-		else          m_skyColor = Lerp(m_skySunrise, m_skyDay, (t - 0.5f) * 2.0f);
+
+		const float split = 0.25f; // 25% of time: Night -> Sunrise, 75%: Sunrise -> Day
+		const float eps = 1e-6f; // avoid div-by-zero
+
+		if (t < split) {
+			float u = t / glm::max(split, eps);            // 0..1 over first 25%
+			m_skyColor = Lerp(m_skyNight, m_skySunrise, u);
+		}
+		else {
+			float u = (t - split) / glm::max(1.0f - split, eps); // 0..1 over last 75%
+			m_skyColor = Lerp(m_skySunrise, m_skyDay, u);
+		}
 
 		m_lightIntensity = minLight + (maxLight - minLight) * t;
 
@@ -248,6 +270,11 @@ void World::updateLighting(float deltaTime)
 
 	m_lightIntensity = glm::clamp(m_lightIntensity, minLight, maxLight);
 
+	float solarT = std::fmod(dayTimer / dayLength, 1.0f); // 0..1
+	float theta = solarT * glm::two_pi<float>();         // 0 = sunrise, 0.25 = noon, 0.5 = sunset
+
+	// Circle in YZ: x=0; y is elevation, z is azimuth (east-west)
+	m_sunDir = glm::normalize(glm::vec3(0.0f, std::sin(theta), std::cos(theta)));
 }
 
 
