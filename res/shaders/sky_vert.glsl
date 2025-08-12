@@ -22,6 +22,6 @@ void main()
 
     // World-space view direction for the sun
     vec3 dirView  = normalize(viewPos.xyz);
-    mat3 R = mat3(uView); // rotation part of view matrix
-    vWorldDir     = transpose(R) * dirView; // unrotate to world space
+    mat3 R = mat3(uView); 
+    vWorldDir = transpose(R) * dirView; 
 }  

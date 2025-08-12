@@ -95,7 +95,6 @@ static const size_t WORKER_COUNT = 4;
 	
 	float dayTimer = 0.0f; 
 	float dayLength = 0.0f; 
-	inline float time01() { return float(ticks) / kTicksPerDay; }
 
 
 private:
@@ -115,7 +114,7 @@ private:
 	float m_lightIntensity = 1.0f;
 	
 	SkyPalette m_skyNight{ {0.035f, 0.008f, 0.141f}, {0.0f,0.0f,0.0f} };
-	SkyPalette m_skySunrise{ {0.659f, 0.0f, 0.659f}, {0.0f, 0.706f, 1.0f} };
+	SkyPalette m_skySunrise{ {0.569f, 0.0f, 0.518f}, {0.0f, 0.706f, 1.0f} };
 	SkyPalette m_skyDay{ {0.655f, 0.898f, 1.0f}, {0.0f, 0.706f, 1.0f} };
 	SkyPalette m_skySunset = { {1.0f, 0.7f, 0.482f}, {0.0f, 0.0f, 0.0f} };
 	SkyPalette m_skyColor = m_skyDay; // Default to day color
@@ -131,13 +130,6 @@ private:
 	const float minLight = 0.05f;
 
 	glm::vec3 m_sunDir;
-
-	// Time
-	uint32_t ticks = 0;
-	static constexpr uint32_t kTicksPerDay = 24000;
-	static constexpr float    kSecondsPerDay = 1200.0f; // 20 real min/day
-
-	void advanceTime(float deltaTime);
 
 	// Multi-threading
 	ThreadPool meshThreadPool{ WORKER_COUNT };

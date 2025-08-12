@@ -8,12 +8,11 @@ Skybox::Skybox() : coneMesh(nullptr)
 
 Skybox::~Skybox()
 {
-	delete coneMesh;
 }
 
 void Skybox::init()
 {
-    coneMesh = new Mesh();
+    coneMesh = std::make_unique<Mesh>();
 
     const int   segments = 64;
     const float radius = 1.0f;
@@ -21,7 +20,7 @@ void Skybox::init()
     const float baseY = 0.0f;
 
     std::vector<glm::vec3> verts;
-    std::vector<glm::vec3> texcoords; // will hold u,v,(0)
+    std::vector<glm::vec3> texcoords; 
     std::vector<unsigned int> inds;
 
     verts.reserve(1 + segments);
@@ -30,7 +29,7 @@ void Skybox::init()
 
     // Apex
     verts.emplace_back(0.0f, apexY, 0.0f);
-    texcoords.emplace_back(0.5f, 1.0f, 0.0f); // u=0.5 (center), v=1.0 (top)
+    texcoords.emplace_back(0.5f, 1.0f, 0.0f); 
 
     const float twoPi = 6.283185307179586f;
 
@@ -42,8 +41,8 @@ void Skybox::init()
 
         verts.emplace_back(x, baseY, z);
 
-        float u = (float)i / (float)segments; // wraps around 0..1
-        float v = 0.0f;                        // base is v=0
+        float u = (float)i / (float)segments; 
+        float v = 0.0f;                       
         texcoords.emplace_back(u, v, 0.0f);
     }
 

@@ -2,6 +2,7 @@
 
 #include "texture.h"
 #include "mesh.h"
+#include <memory>
 
 	static std::vector<float> skyboxVertices = {        
 		-1.0f,  1.0f, -1.0f,
@@ -59,5 +60,5 @@ public:
 	void init();
 	void draw();
 
-	Mesh* coneMesh;
+	std::unique_ptr<Mesh> coneMesh;
 };
