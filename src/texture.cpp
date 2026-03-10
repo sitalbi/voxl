@@ -107,18 +107,18 @@ bool Texture::loadTextureArrayFromFile(const char* filePath,
 
 bool Texture::loadCubemap(const char* filePath)
 {
-    // 0) Load the atlas (disable flip so row math is predictable)
+    // Load the atlas (disable flip so row math is predictable)
     stbi_set_flip_vertically_on_load(false);
     int atlasW = 0, atlasH = 0, channels = 0;
     unsigned char* atlas = stbi_load(filePath, &atlasW, &atlasH, &channels, 4);
     if (!atlas) { std::cerr << "Failed to load: " << filePath << "\n"; return false; }
 
-    // 1) Grid info (adjust if your layout differs)
-    int cols = 3, rows = 2;              // 3Å~2 grid of faces
+    // Grid info 
+    int cols = 3, rows = 2;
     int faceW = atlasW / cols;
     int faceH = atlasH / rows;
 
-    // 2) Create cubemap
+    // Create cubemap
     glGenTextures(1, &m_textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureID);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -127,11 +127,10 @@ bool Texture::loadCubemap(const char* filePath)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-    // 3) Tell GL how to walk rows in the big atlas
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, atlasW);
 
-    // 4) Map grid cells -> cube faces (col,row). Tweak to match your atlas.
+
     struct Face { GLenum target; int c, r; };
     Face map[6] = {
         { GL_TEXTURE_CUBE_MAP_POSITIVE_X, 2, 0 }, // +X (right)
@@ -142,7 +141,6 @@ bool Texture::loadCubemap(const char* filePath)
         { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 1, 1 }, // -Z (back)
     };
 
-    // 5) Upload each face by skipping into the atlas
     for (const Face& f : map) {
         int skipX = f.c * faceW;
         int skipY = f.r * faceH;
@@ -150,13 +148,13 @@ bool Texture::loadCubemap(const char* filePath)
         glPixelStorei(GL_UNPACK_SKIP_ROWS, skipY);
 
         glTexImage2D(f.target, 0,
-            GL_RGBA,                // or GL_RGBA8 if youÅfre not using sRGB
+            GL_RGBA,
             faceW, faceH, 0,
             GL_RGBA, GL_UNSIGNED_BYTE,
             atlas);
     }
 
-    // 6) Reset pixel store + cleanup
+
     glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
     glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
