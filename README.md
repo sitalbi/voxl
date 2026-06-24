@@ -15,7 +15,7 @@ This demo include the following features:
 
 ## Visuals
 <p align="center">
-  <img src="https://simono.fr/voxl2.png" width="650"><br><br><br>
+  <img src="https://simono.fr/images/voxl.png" width="650"><br><br><br>
   <img src="https://github.com/sitalbi/voxl/blob/main/res/repo/voxl.gif" width="650">
 </p>
 
